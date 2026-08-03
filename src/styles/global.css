@@ -1,0 +1,12 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, Arial, sans-serif;
+  color: #151515;
+  background: #f7f5f1;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: #f7f5f1; color: #151515; }
+a { color: inherit; }
+img { display: block; max-width: 100%; }

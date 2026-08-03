@@ -1,0 +1,26 @@
+---
+import '../styles/global.css';
+import media from '../data/media.json';
+const realizations = media.filter((item) => item.type === 'realization').slice(0, 6);
+---
+
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Panelia Studio — wersja robocza</title>
+  </head>
+  <body>
+    <main style="max-width: 1280px; margin: 0 auto; padding: 32px;">
+      <img src="/brand/panelia-logo-dark-horizontal.svg" alt="Panelia Studio" style="width: 320px; margin-bottom: 48px;" />
+      <p style="letter-spacing: .16em; text-transform: uppercase; font-size: 12px;">Repozytorium robocze</p>
+      <h1 style="font-family: Georgia, serif; font-weight: 400; font-size: clamp(42px, 8vw, 96px); line-height: .95; max-width: 900px; margin: 20px 0 32px;">Nowa strona Panelia Studio</h1>
+      <p style="max-width: 720px; font-size: 20px; line-height: 1.6;">Fundament projektu oraz uporządkowana biblioteka wizualizacji i prawdziwych realizacji. Ta strona jest wyłącznie podglądem deweloperskim i nie jest gotowa do publikacji.</p>
+      <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 64px;">
+        {realizations.map((item) => <img src={item.path} alt={item.alt} loading="lazy" style="aspect-ratio: 4/3; object-fit: cover; width: 100%;" />)}
+      </section>
+    </main>
+  </body>
+</html>
