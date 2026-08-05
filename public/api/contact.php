@@ -105,6 +105,14 @@ function panelia_load_config(): array
     if ($allowMock !== null) {
         $config['allow_mock'] = in_array(strtolower($allowMock), ['1', 'true', 'yes'], true);
     }
+    $contactEnv = panelia_env_str('FATICA_ERP_CONTACT_ENV');
+    if ($contactEnv !== null) {
+        $config['is_production'] = !in_array(
+            strtolower($contactEnv),
+            ['development', 'dev', 'test', 'testing', 'local'],
+            true
+        );
+    }
     $enabled = panelia_env_str('FATICA_ERP_CONTACT_ENABLED');
     if ($enabled !== null) {
         $config['enabled'] = in_array(strtolower($enabled), ['1', 'true', 'yes'], true);
@@ -139,13 +147,35 @@ function panelia_send_json(int $status, array $body): void
     exit;
 }
 
-function panelia_correlation_id(): string
+function panelia_uuid_v4(): string
 {
     try {
-        return 'panelia-request-' . bin2hex(random_bytes(9));
+        $bytes = random_bytes(16);
     } catch (\Throwable $e) {
-        return 'panelia-request-' . bin2hex((string) mt_rand());
+        $hex = substr(hash('sha256', microtime(true) . '|' . mt_rand()), 0, 32);
+        $bytes = hex2bin($hex);
+        if ($bytes === false) {
+            return '00000000-0000-4000-8000-000000000000';
+        }
     }
+
+    $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+    $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+    $hex = bin2hex($bytes);
+
+    return sprintf(
+        '%s-%s-%s-%s-%s',
+        substr($hex, 0, 8),
+        substr($hex, 8, 4),
+        substr($hex, 12, 4),
+        substr($hex, 16, 4),
+        substr($hex, 20, 12)
+    );
+}
+
+function panelia_correlation_id(): string
+{
+    return panelia_uuid_v4();
 }
 
 // ==================================================================
@@ -176,15 +206,15 @@ function panelia_validate(array $in): array
 
     // name
     $name = is_string($in['name'] ?? null) ? panelia_clean_line($in['name']) : '';
-    if ($name === '' || mb_strlen($name) < 2 || mb_strlen($name) > 150) {
-        $errors['name'] = 'Podaj imię i nazwisko (2–150 znaków).';
+    if ($name === '' || mb_strlen($name) < 2 || mb_strlen($name) > 200) {
+        $errors['name'] = 'Podaj imię i nazwisko (2–200 znaków).';
     }
     $out['name'] = $name;
 
     // email
     $emailRaw = is_string($in['email'] ?? null) ? trim($in['email']) : '';
     $email = mb_strtolower($emailRaw);
-    if ($email === '' || mb_strlen($email) > 254 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    if ($email === '' || mb_strlen($email) > 255 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors['email'] = 'Podaj poprawny adres e-mail.';
     }
     $out['email'] = $email;
@@ -196,7 +226,7 @@ function panelia_validate(array $in): array
         $plus = (strncmp(ltrim($raw), '+', 1) === 0) ? '+' : '';
         $digits = preg_replace('/[^0-9]/', '', $raw) ?? '';
         $phone = $plus . $digits;
-        if (mb_strlen($phone) > 40 || mb_strlen($digits) < 6) {
+        if (mb_strlen($phone) > 50 || mb_strlen($digits) < 6) {
             $errors['phone'] = 'Podaj poprawny numer telefonu.';
         }
     }
@@ -231,7 +261,7 @@ function panelia_validate(array $in): array
     return ['ok' => count($errors) === 0, 'data' => $out, 'errors' => $errors];
 }
 
-function panelia_safe_url(?string $v, int $max = 2000): ?string
+function panelia_safe_url(?string $v, int $max = 1000): ?string
 {
     if (!is_string($v) || trim($v) === '') {
         return null;
@@ -263,12 +293,12 @@ function panelia_utm(?string $v): ?string
         return null;
     }
     $v = panelia_clean_line($v);
-    return mb_substr($v, 0, 255);
+    return mb_substr($v, 0, 250);
 }
 
 function panelia_iso_or_now(?string $v): string
 {
-    if (is_string($v) && trim($v) !== '') {
+    if (is_string($v) && trim($v) !== '' && mb_strlen(trim($v)) <= 40) {
         $ts = strtotime($v);
         if ($ts !== false) {
             return gmdate('c', $ts);
@@ -315,18 +345,7 @@ function panelia_build_erp_payload(array $data, array $in, string $idem): array
 
 function panelia_make_idempotency_key(): string
 {
-    try {
-        $b = random_bytes(16);
-        $b[6] = chr((ord($b[6]) & 0x0f) | 0x40);
-        $b[8] = chr((ord($b[8]) & 0x3f) | 0x80);
-        $hex = bin2hex($b);
-        $uuid = sprintf('%s-%s-%s-%s-%s',
-            substr($hex, 0, 8), substr($hex, 8, 4), substr($hex, 12, 4),
-            substr($hex, 16, 4), substr($hex, 20, 12));
-    } catch (\Throwable $e) {
-        $uuid = '00000000-0000-4000-8000-000000000000';
-    }
-    return 'panelia-contact-' . $uuid;
+    return 'panelia-contact-' . panelia_uuid_v4();
 }
 
 // ==================================================================
@@ -433,6 +452,63 @@ function panelia_log(array $config, array $fields): void
 // WYSYŁKA DO ERP (cURL + retry)
 // ==================================================================
 
+function panelia_build_erp_headers(
+    string $token,
+    string $idempotencyKey,
+    string $correlationId
+): array {
+    return [
+        'Authorization: Bearer ' . $token,
+        'Content-Type: application/json',
+        'Accept: application/json',
+        'Idempotency-Key: ' . $idempotencyKey,
+        'X-Correlation-ID: ' . $correlationId,
+    ];
+}
+
+function panelia_is_retryable_result(
+    int $status,
+    bool $timeout,
+    bool $transport
+): bool {
+    return $timeout || $transport || in_array($status, [429, 502, 503, 504], true);
+}
+
+function panelia_retry_delay_us(int $status, ?int $retryAfter): int
+{
+    if ($status === 429) {
+        $seconds = max(1, min($retryAfter ?? 1, 2));
+        return $seconds * 1000000;
+    }
+    return 350000;
+}
+
+function panelia_is_erp_success(int $status, ?array $body): bool
+{
+    if (!is_array($body) || ($body['ok'] ?? null) !== true) {
+        return false;
+    }
+
+    if ($status === 201) {
+        return ($body['duplicate'] ?? null) === false
+            && ($body['status'] ?? null) === 'created';
+    }
+
+    if ($status === 200) {
+        return ($body['duplicate'] ?? null) === true
+            && ($body['status'] ?? null) === 'duplicate';
+    }
+
+    return false;
+}
+
+function panelia_mock_enabled(array $config): bool
+{
+    return ($config['mock'] ?? false) === true
+        && ($config['allow_mock'] ?? false) === true
+        && ($config['is_production'] ?? true) === false;
+}
+
 /**
  * Zwraca [ 'status' => int, 'body' => array|null, 'timeout' => bool, 'transport' => bool,
  *          'attempts' => int, 'duration_ms' => int, 'retry_after' => ?int ].
@@ -451,13 +527,11 @@ function panelia_send_to_erp(array $config, array $payload, string $correlationI
     $totalMs = (int) ($config['request_timeout_ms'] ?? 10000);
     $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-    $headers = [
-        'Authorization: Bearer ' . $token,
-        'Content-Type: application/json',
-        'Accept: application/json',
-        'Idempotency-Key: ' . $payload['idempotency_key'],
-        'X-Correlation-ID: ' . $correlationId,
-    ];
+    $headers = panelia_build_erp_headers(
+        $token,
+        (string) $payload['idempotency_key'],
+        $correlationId
+    );
 
     $attempt = 0;
     $maxAttempts = 2; // 1 pierwotna + 1 retry
@@ -517,11 +591,11 @@ function panelia_send_to_erp(array $config, array $payload, string $correlationI
             'retry_after' => $retryAfter,
         ];
 
-        $retryable = $timeout || $transport || in_array($status, [502, 503, 504], true);
+        $retryable = panelia_is_retryable_result($status, $timeout, $transport);
         if (!$retryable || $attempt >= $maxAttempts) {
             break;
         }
-        usleep(350000); // ~350 ms backoff
+        usleep(panelia_retry_delay_us($status, $retryAfter));
     }
 
     $last['attempts'] = $attempt;
@@ -620,7 +694,7 @@ function panelia_contact_main(): void
 
     // --- Idempotency key (frontend generuje; serwer tylko awaryjnie) ---
     $idem = is_string($in['idempotency_key'] ?? null) ? trim($in['idempotency_key']) : '';
-    if ($idem === '' || mb_strlen($idem) > 150 || !panelia_is_idempotency_key($idem)) {
+    if ($idem === '' || mb_strlen($idem) > 190 || !panelia_is_idempotency_key($idem)) {
         $idem = panelia_make_idempotency_key();
     }
 
@@ -638,7 +712,7 @@ function panelia_contact_main(): void
     // --- Konfiguracja niekompletna → bezpieczny błąd (nigdy fałszywy sukces) ---
     // Mock aktywny WYŁĄCZNIE gdy jednocześnie mock=true ORAZ allow_mock=true (oba z prywatnej
     // konfiguracji/env serwera). Samo mock=true na produkcji nie udaje sukcesu.
-    $mock = (($config['mock'] ?? false) === true) && (($config['allow_mock'] ?? false) === true);
+    $mock = panelia_mock_enabled($config);
     if (!$mock) {
         if (($config['enabled'] ?? false) !== true || ($config['erp_token'] ?? '') === '') {
             panelia_log($config, $logBase + ['stage' => 'config', 'result' => 'failure', 'error' => 'not_configured']);
@@ -662,7 +736,9 @@ function panelia_contact_main(): void
         'duration_ms' => $result['duration_ms'],
         'erp_status' => $result['status'],
         'timeout' => $result['timeout'],
-        'result' => ($result['status'] === 200 || $result['status'] === 201) ? 'success' : 'failure',
+        'result' => panelia_is_erp_success((int) $result['status'], $result['body'] ?? null)
+            ? 'success'
+            : 'failure',
     ]);
     panelia_handle_result($result, $correlationId, $config, $logBase);
 }
@@ -670,11 +746,64 @@ function panelia_contact_main(): void
 function panelia_mock_result(string $scenario): array
 {
     return match ($scenario) {
-        '422' => ['status' => 422, 'body' => ['field_errors' => ['email' => 'Podaj poprawny adres e-mail.']], 'timeout' => false, 'transport' => false, 'retry_after' => null],
-        '429' => ['status' => 429, 'body' => null, 'timeout' => false, 'transport' => false, 'retry_after' => 30],
-        '503' => ['status' => 503, 'body' => null, 'timeout' => false, 'transport' => false, 'retry_after' => null],
-        'timeout' => ['status' => 0, 'body' => null, 'timeout' => true, 'transport' => true, 'retry_after' => null],
-        default => ['status' => 201, 'body' => ['id' => 'mock-lead'], 'timeout' => false, 'transport' => false, 'retry_after' => null],
+        '200_duplicate' => [
+            'status' => 200,
+            'body' => [
+                'ok' => true,
+                'duplicate' => true,
+                'idempotent' => true,
+                'status' => 'duplicate',
+                'lead_id' => 'mock-lead',
+                'correlation_id' => '00000000-0000-4000-8000-000000000001',
+            ],
+            'timeout' => false,
+            'transport' => false,
+            'retry_after' => null,
+        ],
+        '422' => [
+            'status' => 422,
+            'body' => ['errors' => ['email' => ['Podaj poprawny adres e-mail.']]],
+            'timeout' => false,
+            'transport' => false,
+            'retry_after' => null,
+        ],
+        '429' => [
+            'status' => 429,
+            'body' => ['message' => 'Too Many Attempts.'],
+            'timeout' => false,
+            'transport' => false,
+            'retry_after' => 1,
+        ],
+        '503' => [
+            'status' => 503,
+            'body' => null,
+            'timeout' => false,
+            'transport' => false,
+            'retry_after' => null,
+        ],
+        'timeout' => [
+            'status' => 0,
+            'body' => null,
+            'timeout' => true,
+            'transport' => true,
+            'retry_after' => null,
+        ],
+        default => [
+            'status' => 201,
+            'body' => [
+                'ok' => true,
+                'duplicate' => false,
+                'status' => 'created',
+                'lead_id' => 'mock-lead',
+                'organization' => 'panelia-studio',
+                'assigned' => true,
+                'possible_duplicate' => false,
+                'correlation_id' => '00000000-0000-4000-8000-000000000001',
+            ],
+            'timeout' => false,
+            'transport' => false,
+            'retry_after' => null,
+        ],
     };
 }
 
@@ -685,8 +814,10 @@ function panelia_handle_result(array $result, string $correlationId, array $conf
 {
     $status = (int) ($result['status'] ?? 0);
 
-    // Sukces (w tym idempotentne powtórzenie zwrócone jako 200).
-    if ($status === 200 || $status === 201) {
+    // Sukces wyłącznie przy finalnym kontrakcie ERP:
+    // 201 + ok=true + duplicate=false + status=created
+    // 200 + ok=true + duplicate=true + status=duplicate
+    if (panelia_is_erp_success($status, $result['body'] ?? null)) {
         panelia_send_json(200, [
             'ok' => true,
             'message' => 'Dziękujemy. Otrzymaliśmy Twoje zgłoszenie. Zespół Panelia Studio skontaktuje się z Tobą.',
@@ -694,13 +825,36 @@ function panelia_handle_result(array $result, string $correlationId, array $conf
         ]);
     }
 
+    if ($status === 200 || $status === 201) {
+        panelia_log($config, $logBase + [
+            'stage' => 'erp_contract',
+            'result' => 'failure',
+            'error' => 'unexpected_success_shape',
+            'erp_status' => $status,
+        ]);
+        panelia_send_json(502, [
+            'ok' => false,
+            'message' => 'Nie udało się teraz wysłać formularza. Spróbuj ponownie za chwilę lub skontaktuj się z nami bezpośrednio.',
+            'request_id' => $correlationId,
+        ]);
+    }
+
     // Walidacja po stronie ERP.
     if ($status === 422) {
         $fieldErrors = [];
-        $bodyErrors = $result['body']['field_errors'] ?? null;
+        $bodyErrors = $result['body']['field_errors']
+            ?? $result['body']['errors']
+            ?? null;
         if (is_array($bodyErrors)) {
             foreach ($bodyErrors as $field => $msg) {
-                if (in_array($field, ['name', 'email', 'phone', 'message', 'consent', 'package_interest'], true) && is_string($msg)) {
+                if (!in_array($field, ['name', 'email', 'phone', 'message', 'consent', 'package_interest'], true)) {
+                    continue;
+                }
+
+                if (is_array($msg)) {
+                    $msg = $msg[0] ?? null;
+                }
+                if (is_string($msg)) {
                     $fieldErrors[$field] = $msg;
                 }
             }

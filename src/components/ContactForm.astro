@@ -12,7 +12,7 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
       id="cf-name"
       name="name"
       autocomplete="name"
-      maxlength="150"
+      maxlength="200"
       required
       aria-required="true"
       aria-describedby="cf-name-error"
@@ -28,7 +28,7 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
         id="cf-email"
         name="email"
         autocomplete="email"
-        maxlength="254"
+        maxlength="255"
         required
         aria-required="true"
         aria-describedby="cf-email-error"
@@ -44,7 +44,7 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
         name="phone"
         autocomplete="tel"
         inputmode="tel"
-        maxlength="40"
+        maxlength="50"
         aria-describedby="cf-phone-error"
       />
       <p class="field-error" id="cf-phone-error" data-error hidden></p>
@@ -248,7 +248,7 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
         const value = params.get(key)?.trim();
         // Nie nadpisuj wcześniejszej wartości pustą (first-touch).
         if (value && !stored[key]) {
-          stored[key] = value.slice(0, 255);
+          stored[key] = value.slice(0, 250);
           changed = true;
         }
       }
@@ -343,11 +343,19 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
         setError(field, msg);
         valid = false;
       };
-      if (name.length < 2) fail('name', 'Podaj imię i nazwisko.');
+      if (name.length < 2 || name.length > 200) {
+        fail('name', 'Podaj imię i nazwisko (2–200 znaków).');
+      }
       if (!email) fail('email', 'Podaj adres e-mail.');
-      else if (!emailPattern.test(email)) fail('email', 'Podaj poprawny adres e-mail.');
-      if (phone && !phonePattern.test(phone)) fail('phone', 'Podaj poprawny numer telefonu.');
-      if (message.length < 10) fail('message', 'Wiadomość powinna mieć co najmniej 10 znaków.');
+      else if (email.length > 255 || !emailPattern.test(email)) {
+        fail('email', 'Podaj poprawny adres e-mail.');
+      }
+      if (phone && (phone.length > 50 || !phonePattern.test(phone))) {
+        fail('phone', 'Podaj poprawny numer telefonu.');
+      }
+      if (message.length < 10 || message.length > 5000) {
+        fail('message', 'Wiadomość powinna mieć od 10 do 5000 znaków.');
+      }
       if (!consent) fail('consent', 'Zgoda jest wymagana, aby wysłać zgłoszenie.');
 
       if (!valid) {

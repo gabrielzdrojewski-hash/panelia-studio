@@ -18,10 +18,12 @@ return [
     'erp_token' => 'TOKEN-DO-UZUPELNIENIA-WYLACZNIE-NA-SERWERZE',
     'request_timeout_ms' => 10000,
     'connect_timeout_ms' => 5000,
-    // Mock aktywny WYŁĄCZNIE gdy jednocześnie mock=true ORAZ allow_mock=true.
-    // Na produkcji zostaw oba false — brak tokenu/enabled=false nigdy nie udaje sukcesu.
+    // Mock aktywny WYŁĄCZNIE gdy jednocześnie:
+    // mock=true, allow_mock=true oraz is_production=false.
+    // Na produkcji: is_production=true i oba mock flags=false.
     'mock' => false,
     'allow_mock' => false,
+    'is_production' => true,
     'rate_limit_max_requests' => 5,
     'rate_limit_window_seconds' => 900,
 ];

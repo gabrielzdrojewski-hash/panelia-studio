@@ -77,6 +77,23 @@ clientLib.includes("'/api/contact'") || clientLib.includes('"/api/contact"')
   : ok('src/lib/contact.ts bez adresu ERP');
 /demo:\s*true/.test(clientLib) && fail('src/lib/contact.ts nadal zwraca demo:true');
 
+const gatewayPhp = read('public/api/contact.php') ?? '';
+gatewayPhp.includes("'Idempotency-Key: '")
+  ? ok('gateway wysyła Idempotency-Key')
+  : fail('gateway nie wysyła Idempotency-Key');
+gatewayPhp.includes("'X-Correlation-ID: '")
+  ? ok('gateway wysyła X-Correlation-ID')
+  : fail('gateway nie wysyła X-Correlation-ID');
+gatewayPhp.includes('panelia_is_erp_success')
+  ? ok('gateway weryfikuje finalny shape odpowiedzi 201/200 duplicate')
+  : fail('gateway nie weryfikuje finalnego shape odpowiedzi ERP');
+gatewayPhp.includes('[429, 502, 503, 504]')
+  ? ok('gateway retry: 429/502/503/504')
+  : fail('gateway retry nie obejmuje finalnej polityki 429/502/503/504');
+existsSync(join(ROOT, 'scripts/php-router.php'))
+  ? ok('lokalny router PHP do E2E istnieje')
+  : fail('brak scripts/php-router.php do lokalnego E2E');
+
 // 4. Brak sekretów / ERP w KLIENCKIM bundlu JS (dist/_astro/*.js).
 const clientJs = walk('dist/_astro', '.js');
 if (clientJs.length === 0) {

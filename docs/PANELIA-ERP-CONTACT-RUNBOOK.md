@@ -4,8 +4,9 @@ Operacyjny opis bezpiecznego tworzenia leadów z formularza kontaktowego `paneli
 w Fatica ERP. **Jedno źródło prawdy** dla integracji kontaktowej (`docs/FATICA_INTEGRATION.md`
 odsyła tutaj). Repozytorium **nie zawiera** tokenów ani sekretów.
 
-> Stan: **CODE COMPLETE — WAITING FOR ERP TOKEN**. Formularz jest domyślnie wyłączony
-> (`PUBLIC_CONTACT_FORM_ENABLED=false`) — produkcja pokazuje kontakt bezpośredni.
+> Stan: **READY FOR LOCAL PANELIA E2E** po finalizacji kontraktu ERP w commicie `5d3d49c`.
+> Formularz pozostaje domyślnie wyłączony (`PUBLIC_CONTACT_FORM_ENABLED=false`) —
+> produkcja nadal pokazuje kontakt bezpośredni.
 
 ## 1. Diagram przepływu i role
 
@@ -36,11 +37,12 @@ Kolejność odczytu przez gateway: **1) `getenv()`, 2) prywatny plik**
 (ścieżka liczona względem `public_html/api/contact.php` przez `dirname(__DIR__, 2)` — bez hardcodu konta).
 
 Wzór: `docs/examples/panelia-erp-config.php.example`. Klucze: `enabled`, `erp_public_leads_url`,
-`erp_token`, `request_timeout_ms`, `connect_timeout_ms`, `mock`, `rate_limit_max_requests`,
-`rate_limit_window_seconds` (opcjonalnie `ip_hash_salt`).
+`erp_token`, `request_timeout_ms`, `connect_timeout_ms`, `mock`, `allow_mock`, `is_production`,
+`rate_limit_max_requests`, `rate_limit_window_seconds` (opcjonalnie `ip_hash_salt`).
 
 Zmienne env (opcjonalne, nadpisują plik): `FATICA_ERP_PUBLIC_LEADS_URL`, `FATICA_ERP_PANELIA_TOKEN`,
-`FATICA_ERP_REQUEST_TIMEOUT_MS`, `FATICA_ERP_CONTACT_MOCK`, `FATICA_ERP_CONTACT_ENABLED`.
+`FATICA_ERP_REQUEST_TIMEOUT_MS`, `FATICA_ERP_CONTACT_MOCK`, `FATICA_ERP_CONTACT_ALLOW_MOCK`,
+`FATICA_ERP_CONTACT_ENV`, `FATICA_ERP_CONTACT_ENABLED`.
 
 ## 4. Feature flag (build-time)
 `PUBLIC_CONTACT_FORM_ENABLED` (jedyna publiczna zmienna; token **nie** może mieć prefiksu `PUBLIC_`).
@@ -74,12 +76,12 @@ tokenu. Nagłówki do ERP: `Authorization: Bearer <TOKEN>`, `Content-Type/Accept
 Źródło prawdy: `src/lib/contact.ts` (`packageOptions`) i stała `PANELIA_ALLOWED_PACKAGES` w gatewayu.
 
 ## 7. Walidacja serwerowa (niezależna od klienta)
-- `name` wymagane, 2–150, bez HTML; `email` wymagane, lowercase, ≤254, `FILTER_VALIDATE_EMAIL`;
-- `phone` opcjonalne, ≤40, zachowany wiodący `+`, tylko cyfry; `message` wymagane, 10–5000, bez HTML;
+- `name` wymagane, 2–200, bez HTML; `email` wymagane, lowercase, ≤255, `FILTER_VALIDATE_EMAIL`;
+- `phone` opcjonalne, ≤50, zachowany wiodący `+`, tylko cyfry; `message` wymagane, 10–5000, bez HTML;
 - `consent` dokładnie `true`; `package_interest` tylko z listy; `landing_page` tylko host
-  `paneliastudio.pl`/`www.paneliastudio.pl` (odrzuca `javascript:`/`data:`); `referrer` http/https;
-- UTM ≤255, plain text; `submitted_at` ISO lub czas serwera; `idempotency_key`
-  `panelia-contact-<UUIDv4>` (serwer generuje tylko awaryjnie).
+  `paneliastudio.pl`/`www.paneliastudio.pl`, ≤1000 (odrzuca `javascript:`/`data:`); `referrer` http/https, ≤1000;
+- UTM ≤250, plain text; `submitted_at` ≤40, ISO lub czas serwera; `idempotency_key`
+  ≤190 i w formacie `panelia-contact-<UUIDv4>` (serwer generuje tylko awaryjnie).
 
 ## 8. Antyspam
 - **Honeypot** `company` — jeśli wypełniony: neutralna odpowiedź 200, brak wysyłki, log bez PII.
@@ -98,17 +100,22 @@ postaci). Poważny błąd ochrony → neutralny **503** (nie wyłączamy zabezpi
 ## 10. Idempotency i Correlation ID
 - `idempotency_key` generuje frontend (`panelia-contact-<UUID>`), **ten sam** przy retry, nowy dopiero po sukcesie.
   Przekazywany do ERP jako `Idempotency-Key`. Idempotentne powtórzenie zwrócone przez ERP jako 200 = sukces.
-- `X-Correlation-ID` (`panelia-request-<losowy>`) generuje serwer niezależnie; trafia do ERP i do logów.
+- `X-Correlation-ID` jest UUID v4 generowanym przez gateway; ten sam identyfikator jest używany
+  podczas automatycznego retry, trafia do ERP i do prywatnych logów.
 
 ## 11. Timeout i retry
 cURL, TLS włączone (`VERIFYPEER=true`, `VERIFYHOST=2`). Connect 5000 ms, total 10000 ms.
-Maks. **1 retry** (ten sam payload, idempotency, correlation), backoff ~350 ms. Retry **tylko** dla:
-timeout / błąd transportu / 502 / 503 / 504. Brak retry dla: 400/401/403/404/409/422/429.
+Maks. **1 retry** (ten sam payload, Idempotency-Key i X-Correlation-ID).
+Retry dla: timeout / błąd transportu / 429 / 502 / 503 / 504.
+Dla 429 gateway stosuje krótki, ograniczony backoff (maks. 2 s); dla pozostałych ~350 ms.
+Brak retry dla: 400/401/403/404/409/422.
 
 ## 12. Mapowanie odpowiedzi (do przeglądarki)
 | Wynik ERP | Odpowiedź strony |
 | --- | --- |
-| 200 / 201 (i idempotentne 200) | 200 `{ ok:true, message, request_id }` |
+| 201 + `ok=true`, `duplicate=false`, `status=created` | 200 `{ ok:true, message, request_id }` |
+| 200 + `ok=true`, `duplicate=true`, `status=duplicate` | 200 `{ ok:true, message, request_id }` |
+| 200/201 o nieoczekiwanym kształcie | 502 neutralny błąd kontraktu |
 | 422 | 422 `{ ok:false, field_errors, request_id }` (tylko publiczne pola) |
 | 401 / 403 | 503 „Formularz chwilowo niedostępny…" |
 | 429 | 429 + `Retry-After` (jeśli dostępne) |
@@ -123,8 +130,9 @@ czas odpowiedzi, status ERP, timeout, rodzaj błędu, hash IP, landing (host/śc
 treści zgody, danych konfiguracji prywatnej. Błąd zapisu logu nie ujawnia ścieżki klientowi.
 
 ## 14. Bezpieczny mock
-Aktywny **tylko** gdy prywatna konfiguracja spełnia **jednocześnie** `mock=true` **oraz** `allow_mock=true`
-(oba domyślnie `false`). Samo `mock=true` na produkcji nie udaje sukcesu. Nie ufamy `mock`/`mock_scenario`
+Aktywny **tylko** gdy prywatna konfiguracja spełnia jednocześnie: `mock=true`, `allow_mock=true`
+oraz `is_production=false` (lub `FATICA_ERP_CONTACT_ENV=local|development|test`).
+Samo `mock=true` na produkcji nie udaje sukcesu. Nie ufamy `mock`/`mock_scenario`
 z klienta (sterują tylko scenariuszem, nie włączają mocka). Brak tokenu lub `enabled=false` → **zawsze**
 bezpieczny błąd 503 (nigdy fałszywy sukces). Mock nie wysyła do ERP, nie zapisuje pełnych danych;
 symuluje `201/422/429/503/timeout` (pole `mock_scenario`) — do testów lokalnych/staging.
@@ -141,8 +149,36 @@ symuluje `201/422/429/503/timeout` (pole `mock_scenario`) — do testów lokalny
 Ustaw prywatną konfigurację z `mock=true` (lub token stagingowy), włącz `PUBLIC_CONTACT_FORM_ENABLED=true`,
 wyślij zgłoszenia symulujące 201/422/429/503/timeout, sprawdź komunikaty i logi (maskowanie).
 
+### Lokalny test E2E z lokalnym ERP
+W osobnym PowerShellu uruchom lokalny ERP zgodnie z jego dokumentacją i wygeneruj wyłącznie token testowy.
+Następnie w repo Panelii:
+
+```powershell
+cd "C:\Projects\panelia-studio"
+
+$env:PUBLIC_CONTACT_FORM_ENABLED = "true"
+npm run build
+
+$env:FATICA_ERP_PUBLIC_LEADS_URL = "http://127.0.0.1:8000/api/public/leads"
+$env:FATICA_ERP_PANELIA_TOKEN = "<LOKALNY_TOKEN_TESTOWY>"
+$env:FATICA_ERP_REQUEST_TIMEOUT_MS = "10000"
+$env:FATICA_ERP_CONTACT_ENABLED = "true"
+$env:FATICA_ERP_CONTACT_MOCK = "false"
+$env:FATICA_ERP_CONTACT_ALLOW_MOCK = "false"
+$env:FATICA_ERP_CONTACT_ENV = "local"
+
+npm run e2e:serve
+```
+
+Otwórz `http://127.0.0.1:4322/kontakt/`, wyślij jeden lead i potwierdź w lokalnym ERP:
+organizację `panelia-studio`, wiadomość w Conversation, `source=paneliastudio.pl`, UTM,
+Idempotency-Key oraz brak duplikatu przy ponowieniu z tym samym kluczem.
+
+Po teście usuń zmienne z sesji PowerShell i wykonaj finalny build z flagą `false`.
+
 ### Test produkcyjny
-Po otrzymaniu tokenu: prywatny plik z `enabled=true` + `mock=false`, wyślij **jeden** testowy lead,
+Po otrzymaniu tokenu produkcyjnego: prywatny plik z `enabled=true`, `mock=false`,
+`allow_mock=false`, `is_production=true`; wyślij **jeden** testowy lead,
 potwierdź w Fatica ERP (lead + powiadomienia), następnie usuń testowy lead.
 
 ## 16. Aktywacja

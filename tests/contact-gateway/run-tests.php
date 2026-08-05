@@ -85,7 +85,7 @@ check('safe_url https ok', panelia_safe_url('https://x.pl/a') === 'https://x.pl/
 
 // 19/20 UTM: limit długości 255
 $long = str_repeat('a', 400);
-check('19 utm truncated to 255', mb_strlen((string) panelia_utm($long)) === 255);
+check('19 utm truncated to 250', mb_strlen((string) panelia_utm($long)) === 250);
 check('19 utm empty -> null', panelia_utm('') === null);
 
 // submitted_at: fallback czasu serwera dla błędnego
@@ -136,6 +136,98 @@ check('20 tylko udokumentowane pola', array_keys($pl) === $documented);
 check('landing_page zachowane (własny host)', $pl['landing_page'] === 'https://paneliastudio.pl/kontakt?x=1');
 check('utm_source zmapowane', $pl['utm_source'] === 'newsletter');
 check('utm puste -> null', $pl['utm_term'] === null);
+
+// Finalny kontrakt ERP 5d3d49c: limity.
+$name200 = panelia_validate([
+    'name' => str_repeat('A', 200),
+    'email' => 'a@b.pl',
+    'message' => str_repeat('x', 20),
+    'consent' => true,
+]);
+check('contract name 200 accepted', $name200['ok'] === true);
+
+$name201 = panelia_validate([
+    'name' => str_repeat('A', 201),
+    'email' => 'a@b.pl',
+    'message' => str_repeat('x', 20),
+    'consent' => true,
+]);
+check('contract name 201 rejected', isset($name201['errors']['name']));
+
+$phone50 = panelia_validate([
+    'name' => 'Anna Nowak',
+    'email' => 'a@b.pl',
+    'phone' => '+' . str_repeat('1', 49),
+    'message' => str_repeat('x', 20),
+    'consent' => true,
+]);
+check('contract phone max 50 accepted', $phone50['ok'] === true);
+
+check('contract UTM truncated to 250', mb_strlen((string) panelia_utm(str_repeat('a', 400))) === 250);
+check('contract URL over 1000 rejected', panelia_safe_url('https://example.com/' . str_repeat('a', 1000)) === null);
+check('contract submitted_at max 40 fallback', panelia_iso_or_now(str_repeat('2', 41)) !== str_repeat('2', 41));
+
+// Correlation ID = UUID v4.
+$cid = panelia_correlation_id();
+check(
+    'contract correlation UUID v4',
+    (bool) preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $cid)
+);
+
+// Finalne nagłówki.
+$headers = panelia_build_erp_headers(
+    '__TEST_TOKEN__',
+    'panelia-contact-3f2504e0-4f89-41d3-9a0c-0305e82c3301',
+    '3f2504e0-4f89-41d3-9a0c-0305e82c3301'
+);
+check('contract Authorization Bearer header', in_array('Authorization: Bearer __TEST_TOKEN__', $headers, true));
+check('contract Content-Type header', in_array('Content-Type: application/json', $headers, true));
+check('contract Accept header', in_array('Accept: application/json', $headers, true));
+check(
+    'contract Idempotency-Key header',
+    in_array('Idempotency-Key: panelia-contact-3f2504e0-4f89-41d3-9a0c-0305e82c3301', $headers, true)
+);
+check(
+    'contract X-Correlation-ID header',
+    in_array('X-Correlation-ID: 3f2504e0-4f89-41d3-9a0c-0305e82c3301', $headers, true)
+);
+
+// Retry: maksymalnie jedna dodatkowa próba w PHP; 429/502/503/504 i transport są retryable.
+check('contract retry 429', panelia_is_retryable_result(429, false, false));
+check('contract retry 503', panelia_is_retryable_result(503, false, false));
+check('contract retry timeout', panelia_is_retryable_result(0, true, true));
+check('contract no retry 401', !panelia_is_retryable_result(401, false, false));
+check('contract no retry 403', !panelia_is_retryable_result(403, false, false));
+check('contract no retry 422', !panelia_is_retryable_result(422, false, false));
+check('contract 429 backoff capped', panelia_retry_delay_us(429, 60) === 2000000);
+
+// Sukces wyłącznie dla finalnego response shape.
+check(
+    'contract 201 created success',
+    panelia_is_erp_success(201, ['ok' => true, 'duplicate' => false, 'status' => 'created'])
+);
+check(
+    'contract 200 duplicate success',
+    panelia_is_erp_success(200, ['ok' => true, 'duplicate' => true, 'status' => 'duplicate'])
+);
+check(
+    'contract malformed 201 not success',
+    !panelia_is_erp_success(201, ['ok' => true])
+);
+check(
+    'contract malformed 200 not success',
+    !panelia_is_erp_success(200, ['ok' => true, 'duplicate' => false, 'status' => 'created'])
+);
+
+// Mock tylko poza produkcją.
+check(
+    'contract mock disabled in production',
+    !panelia_mock_enabled(['mock' => true, 'allow_mock' => true, 'is_production' => true])
+);
+check(
+    'contract mock enabled in local test',
+    panelia_mock_enabled(['mock' => true, 'allow_mock' => true, 'is_production' => false])
+);
 
 echo "\n";
 echo "Wynik: " . ($tests - $failed) . "/$tests OK\n";
