@@ -340,6 +340,22 @@ const featuredProject = projects[0];
     text-shadow: 0 2px 50px rgba(0, 0, 0, 0.3);
   }
   .hero-actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 2.4rem; }
+  /* Hotfix: drugie CTA hero ma czarne tło już w stanie domyślnym (czytelność na zdjęciu).
+     Scoped tylko do .hero-actions — nie zmienia .btn-ghost w innych sekcjach ani w headerze. */
+  .hero-actions .btn-ghost {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+  }
+  .hero-actions .btn-ghost:hover {
+    background: color-mix(in srgb, var(--ink) 82%, #fff);
+    border-color: var(--gold);
+    color: #fff;
+  }
+  .hero-actions .btn-ghost:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
+  }
   .hero-subline {
     margin-top: 2rem;
     max-width: 46ch;
