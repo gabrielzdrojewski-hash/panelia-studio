@@ -19,6 +19,11 @@ ErrorDocument 404 /404.html
   RewriteCond %{HTTP_HOST} ^www\. [NC]
   RewriteRule ^ https://paneliastudio.pl%{REQUEST_URI} [L,R=301]
 
+  # --- 2b. Endpoint kontaktowy (wewnętrzny rewrite do PHP gateway) ---
+  # POST /api/contact -> api/contact.php. Bez R=301/302 (zachowuje POST), bez pętli,
+  # nie koliduje z /kontakt ani z ErrorDocument.
+  RewriteRule ^api/contact/?$ api/contact.php [L]
+
   # --- 3. Przekierowania 301 starych adresów WordPress ---
   # Query string jest zachowywany domyślnie przez Apache.
   RewriteRule ^home-2-2/?$     /            [L,R=301]
@@ -51,6 +56,13 @@ ErrorDocument 404 /404.html
   AddOutputFilterByType DEFLATE application/javascript
   AddOutputFilterByType DEFLATE application/json
   AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# --- Endpoint kontaktowy: nigdy nie cache'uj (dodatkowo do nagłówków z PHP) ---
+<IfModule mod_headers.c>
+  <FilesMatch "^contact\.php$">
+    Header set Cache-Control "no-store, no-cache, must-revalidate"
+  </FilesMatch>
 </IfModule>
 
 # --- 6. Cache (mod_expires) ---

@@ -12,6 +12,7 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
       id="cf-name"
       name="name"
       autocomplete="name"
+      maxlength="150"
       required
       aria-required="true"
       aria-describedby="cf-name-error"
@@ -27,6 +28,7 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
         id="cf-email"
         name="email"
         autocomplete="email"
+        maxlength="254"
         required
         aria-required="true"
         aria-describedby="cf-email-error"
@@ -42,6 +44,7 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
         name="phone"
         autocomplete="tel"
         inputmode="tel"
+        maxlength="40"
         aria-describedby="cf-phone-error"
       />
       <p class="field-error" id="cf-phone-error" data-error hidden></p>
@@ -70,6 +73,7 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
       id="cf-message"
       name="message"
       rows="5"
+      maxlength="5000"
       required
       aria-required="true"
       aria-describedby="cf-message-error"
@@ -96,7 +100,7 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
 
   <button type="submit" class="btn contact-submit">Wyślij zapytanie</button>
 
-  <p class="form-status" id="form-status" role="status" aria-live="polite" data-status hidden></p>
+  <p class="form-status" id="form-status" role="status" aria-live="polite" tabindex="-1" data-status hidden></p>
 </form>
 
 <style>
@@ -206,20 +210,64 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
 </style>
 
 <script>
-  import { sendContactForm } from '../lib/contact';
-  import type { ContactPayload } from '../lib/contact';
+  import { sendContactForm, isPackageInterest } from '../lib/contact';
+  import type { ContactRequest, PackageInterest } from '../lib/contact';
 
   const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
   if (form) {
     const status = form.querySelector<HTMLElement>('[data-status]');
+    const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
 
-    // Wstępny wybór pakietu na podstawie parametru URL, np. /kontakt?pakiet=panelia_signature
-    const preselect = new URLSearchParams(window.location.search).get('pakiet');
-    if (preselect) {
-      const select = form.querySelector<HTMLSelectElement>('#cf-package');
-      if (select && [...select.options].some((option) => option.value === preselect)) {
-        select.value = preselect;
+    // Czas rozpoczęcia wypełniania (ochrona przed zbyt szybkim botem).
+    const formStartedAt = Date.now();
+
+    // Idempotency key: ten sam przy retry, nowy dopiero po sukcesie.
+    const makeUuid = (): string => {
+      if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+      // Fallback bez crypto.randomUUID().
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+    };
+    let idempotencyKey = `panelia-contact-${makeUuid()}`;
+
+    // UTM first-touch (sessionStorage, bez cookies i trackerów).
+    const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as const;
+    const captureUtm = (): Record<string, string> => {
+      let stored: Record<string, string> = {};
+      try {
+        stored = JSON.parse(sessionStorage.getItem('panelia_utm') || '{}');
+      } catch {
+        stored = {};
       }
+      const params = new URLSearchParams(window.location.search);
+      let changed = false;
+      for (const key of UTM_KEYS) {
+        const value = params.get(key)?.trim();
+        // Nie nadpisuj wcześniejszej wartości pustą (first-touch).
+        if (value && !stored[key]) {
+          stored[key] = value.slice(0, 255);
+          changed = true;
+        }
+      }
+      if (changed) {
+        try {
+          sessionStorage.setItem('panelia_utm', JSON.stringify(stored));
+        } catch {
+          /* brak sessionStorage — pomijamy */
+        }
+      }
+      return stored;
+    };
+    const utm = captureUtm();
+
+    // Preselect pakietu z URL — wyłącznie dla dozwolonych wartości.
+    const preselect = new URLSearchParams(window.location.search).get('pakiet');
+    if (preselect && isPackageInterest(preselect)) {
+      const select = form.querySelector<HTMLSelectElement>('#cf-package');
+      if (select) select.value = preselect;
     }
 
     const setError = (name: string, message: string | null) => {
@@ -234,6 +282,8 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
         errorEl.hidden = !message;
       }
     };
+    const clearErrors = () =>
+      ['name', 'email', 'phone', 'message', 'consent'].forEach((f) => setError(f, null));
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phonePattern = /^[+]?[\d\s()-]{7,}$/;
@@ -244,71 +294,112 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
       status.dataset.variant = variant;
       status.hidden = false;
     };
+    const clearStatus = () => {
+      if (status) status.hidden = true;
+    };
+
+    let submitting = false;
+    const setBusy = (busy: boolean) => {
+      submitting = busy;
+      if (!submitBtn) return;
+      submitBtn.disabled = busy;
+      submitBtn.setAttribute('aria-disabled', busy ? 'true' : 'false');
+      submitBtn.textContent = busy ? 'Wysyłanie…' : 'Wyślij zapytanie';
+    };
+
+    // Pojedyncza próba z timeoutem klienta (25 s). Retry transportowy jest WYŁĄCZNIE po stronie
+    // gatewaya PHP — nie dublujemy go w kliencie, aby uniknąć kaskady wywołań ERP. Przy błędzie
+    // sieci/timeoutu użytkownik może ponowić ręcznie: idempotency_key pozostaje ten sam
+    // (nowy powstaje dopiero po sukcesie), więc ERP zdeduplikuje ewentualne powtórzenie.
+    const sendOnce = async (payload: ContactRequest) => {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 25000);
+      try {
+        return await sendContactForm(payload, controller.signal);
+      } finally {
+        window.clearTimeout(timer);
+      }
+    };
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (submitting) return; // blokada podwójnego submitu
       const data = new FormData(form);
 
-      // Honeypot — jeśli wypełniony, przerwij po cichu (prawdopodobnie bot).
+      // Honeypot — jeśli wypełniony, przerwij po cichu.
       if ((data.get('company') as string)?.trim()) return;
 
       const name = (data.get('name') as string)?.trim() ?? '';
-      const email = (data.get('email') as string)?.trim() ?? '';
+      const email = (data.get('email') as string)?.trim().toLowerCase() ?? '';
       const phone = (data.get('phone') as string)?.trim() ?? '';
       const message = (data.get('message') as string)?.trim() ?? '';
       const consent = data.get('consent') === 'on';
+      const pkgRaw = (data.get('package_interest') as string) ?? '';
 
+      clearErrors();
+      clearStatus();
       let valid = true;
       const fail = (field: string, msg: string) => {
         setError(field, msg);
         valid = false;
       };
-
-      setError('name', null);
-      setError('email', null);
-      setError('phone', null);
-      setError('message', null);
-      setError('consent', null);
-
       if (name.length < 2) fail('name', 'Podaj imię i nazwisko.');
       if (!email) fail('email', 'Podaj adres e-mail.');
       else if (!emailPattern.test(email)) fail('email', 'Podaj poprawny adres e-mail.');
       if (phone && !phonePattern.test(phone)) fail('phone', 'Podaj poprawny numer telefonu.');
       if (message.length < 10) fail('message', 'Wiadomość powinna mieć co najmniej 10 znaków.');
-      if (!consent) fail('consent', 'Zgoda jest wymagana, aby wysłać zapytanie.');
+      if (!consent) fail('consent', 'Zgoda jest wymagana, aby wysłać zgłoszenie.');
 
       if (!valid) {
         form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
         return;
       }
 
-      const payload: ContactPayload = {
+      const payload: ContactRequest = {
         name,
         email,
-        phone,
-        packageInterest: (data.get('package_interest') as ContactPayload['packageInterest']) ?? '',
+        phone: phone || undefined,
+        package_interest: isPackageInterest(pkgRaw) ? (pkgRaw as PackageInterest) : null,
         message,
         consent,
-        submittedAt: new Date().toISOString(),
+        submitted_at: new Date().toISOString(),
+        landing_page: window.location.href,
+        referrer: document.referrer || null,
+        utm_source: utm.utm_source ?? null,
+        utm_medium: utm.utm_medium ?? null,
+        utm_campaign: utm.utm_campaign ?? null,
+        utm_content: utm.utm_content ?? null,
+        utm_term: utm.utm_term ?? null,
+        idempotency_key: idempotencyKey,
+        client_request_id: makeUuid(),
+        form_started_at: formStartedAt,
       };
 
-      const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Wysyłanie…';
-      }
-
+      setBusy(true);
       try {
-        const result = await sendContactForm(payload);
-        showStatus(result.message, 'success');
-        form.reset();
-      } catch {
-        showStatus('Coś poszło nie tak. Prosimy o kontakt telefoniczny lub e-mailowy.', 'error');
-      } finally {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Wyślij zapytanie';
+        const result = await sendOnce(payload);
+
+        if (result.ok) {
+          showStatus(result.message, 'success');
+          form.reset();
+          idempotencyKey = `panelia-contact-${makeUuid()}`; // nowy klucz po sukcesie
+          return;
         }
+
+        if (result.outcome === 'validation' && result.fieldErrors) {
+          for (const [field, msg] of Object.entries(result.fieldErrors)) {
+            setError(field, msg);
+          }
+          form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+          showStatus(result.message, 'error');
+          return;
+        }
+
+        // rate_limit / unavailable / network — komunikat ogólny; dane pozostają w formularzu.
+        showStatus(result.message, 'error');
+        status?.focus?.();
+      } finally {
+        setBusy(false);
       }
     });
   }

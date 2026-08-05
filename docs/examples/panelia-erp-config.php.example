@@ -1,0 +1,27 @@
+<?php
+
+declare(strict_types=1);
+
+// PRZYKŁAD prywatnej konfiguracji gatewaya kontaktowego.
+//
+// Wdrożenie na serwerze:
+//   Skopiuj ten plik jako:
+//     /domains/paneliastudio.pl/private_html/panelia-erp-config.php
+//   (POZA public_html — plik NIE może być dostępny publicznie).
+//
+// NIE commituj prawdziwego panelia-erp-config.php do repozytorium.
+// Token uzupełnij WYŁĄCZNIE na serwerze.
+
+return [
+    'enabled' => false,
+    'erp_public_leads_url' => 'https://app.fatica.pl/api/public/leads',
+    'erp_token' => 'TOKEN-DO-UZUPELNIENIA-WYLACZNIE-NA-SERWERZE',
+    'request_timeout_ms' => 10000,
+    'connect_timeout_ms' => 5000,
+    // Mock aktywny WYŁĄCZNIE gdy jednocześnie mock=true ORAZ allow_mock=true.
+    // Na produkcji zostaw oba false — brak tokenu/enabled=false nigdy nie udaje sukcesu.
+    'mock' => false,
+    'allow_mock' => false,
+    'rate_limit_max_requests' => 5,
+    'rate_limit_window_seconds' => 900,
+];

@@ -1,9 +1,13 @@
 ---
-// UWAGA: ContactForm.astro celowo NIE jest tu używany — formularz działa w trybie demo i nie
-// dostarcza leada. Do czasu integracji z Fatica ERP prezentujemy kontakt bezpośredni.
-// Nie usuwać komponentu src/components/ContactForm.astro — pozostaje do integracji.
+// Feature flag: PUBLIC_CONTACT_FORM_ENABLED (build-time).
+//   false — kontakt bezpośredni (produkcyjnie bezpieczny, domyślny).
+//   true  — formularz online (gateway /api/contact → Fatica ERP) + telefon/e-mail jako alternatywa.
+// Komponent ContactForm.astro renderujemy WYŁĄCZNIE gdy flaga = true.
 import BaseLayout from '../layouts/BaseLayout.astro';
+import ContactForm from '../components/ContactForm.astro';
 import { contact } from '../data/site';
+
+const contactFormEnabled = import.meta.env.PUBLIC_CONTACT_FORM_ENABLED === 'true';
 ---
 
 <BaseLayout
@@ -45,25 +49,44 @@ import { contact } from '../data/site';
       </div>
 
       <div class="contact-right" data-reveal style="--reveal-delay: 120ms">
-        <div class="contact-direct-panel">
-          <p class="eyebrow">Kontakt bezpośredni</p>
-          <h2 class="contact-direct-title">Porozmawiajmy o Twoim projekcie.</h2>
-          <p class="muted contact-direct-intro">
-            Najszybciej skontaktujesz się z nami telefonicznie lub e-mailowo. Formularz online
-            uruchomimy po zakończeniu integracji.
-          </p>
+        {
+          contactFormEnabled ? (
+            <div class="contact-form-panel">
+              <p class="eyebrow">Napisz do nas</p>
+              <h2 class="contact-direct-title">Porozmawiajmy o Twoim projekcie.</h2>
+              <p class="muted contact-direct-intro">
+                Opowiedz nam o swoim wnętrzu. Skontaktujemy się, aby omówić projekt. Pola oznaczone
+                gwiazdką (*) są wymagane.
+              </p>
+              <ContactForm />
+              <p class="muted contact-form-fallback">
+                Woli(sz) kontakt bezpośredni? Zadzwoń pod{' '}
+                <a href={`tel:${contact.phoneHref}`}>{contact.phone}</a> lub napisz na{' '}
+                <a href={`mailto:${contact.email}`}>{contact.email}</a>.
+              </p>
+            </div>
+          ) : (
+            <div class="contact-direct-panel">
+              <p class="eyebrow">Kontakt bezpośredni</p>
+              <h2 class="contact-direct-title">Porozmawiajmy o Twoim projekcie.</h2>
+              <p class="muted contact-direct-intro">
+                Najszybciej skontaktujesz się z nami telefonicznie lub e-mailowo. Formularz online
+                uruchomimy po zakończeniu integracji.
+              </p>
 
-          <div class="contact-direct-actions">
-            <a href={`tel:${contact.phoneHref}`} class="contact-cta">
-              <span class="contact-cta-label">Zadzwoń</span>
-              <span class="contact-cta-value">{contact.phone}</span>
-            </a>
-            <a href={`mailto:${contact.email}`} class="contact-cta">
-              <span class="contact-cta-label">Napisz</span>
-              <span class="contact-cta-value">{contact.email}</span>
-            </a>
-          </div>
-        </div>
+              <div class="contact-direct-actions">
+                <a href={`tel:${contact.phoneHref}`} class="contact-cta">
+                  <span class="contact-cta-label">Zadzwoń</span>
+                  <span class="contact-cta-value">{contact.phone}</span>
+                </a>
+                <a href={`mailto:${contact.email}`} class="contact-cta">
+                  <span class="contact-cta-label">Napisz</span>
+                  <span class="contact-cta-value">{contact.email}</span>
+                </a>
+              </div>
+            </div>
+          )
+        }
       </div>
     </div>
   </section>
@@ -138,12 +161,22 @@ import { contact } from '../data/site';
   .contact-detail-value { font-size: clamp(1.15rem, 1.6vw, 1.5rem); font-weight: 600; color: var(--on-dark); font-style: normal; }
   a.contact-detail:hover .contact-detail-value { color: var(--gold); }
 
-  .contact-direct-panel {
+  .contact-direct-panel,
+  .contact-form-panel {
     background: var(--surface);
     border-radius: var(--radius-lg);
     padding: clamp(30px, 3vw, 46px);
     box-shadow: var(--shadow-soft);
   }
+  .contact-form-panel .eyebrow { color: var(--accent-deep); }
+  .contact-form-panel .contact-direct-intro { margin-bottom: clamp(20px, 2.5vw, 30px); }
+  .contact-form-fallback {
+    margin-top: clamp(18px, 2vw, 26px);
+    padding-top: clamp(16px, 2vw, 22px);
+    border-top: 1px solid var(--line);
+    font-size: 0.9rem;
+  }
+  .contact-form-fallback a { color: var(--accent-deep); text-decoration: underline; text-underline-offset: 2px; }
   .contact-direct-panel .eyebrow { color: var(--accent-deep); }
   .contact-direct-title {
     color: var(--ink);

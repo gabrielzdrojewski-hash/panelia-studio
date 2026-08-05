@@ -9,3 +9,9 @@ desktop.ini
 Thumbs.db
 *.log
 .claude/
+
+# Lokalny artefakt buildu produkcyjnego — nie commitować.
+/panelia-studio-production.zip
+
+# Prywatna konfiguracja/logi/rate-limit gatewaya (gdyby powstały lokalnie poza serwerem).
+/private_html/

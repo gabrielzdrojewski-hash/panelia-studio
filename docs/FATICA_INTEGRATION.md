@@ -13,22 +13,31 @@ Na obecnym etapie integracja **nie jest wdrożona** — strona działa na danych
 
 ## 1. Formularz kontaktowy → `POST /api/public/leads`
 
-Zgłoszenia z formularza kontaktowego trafiają docelowo do Fatica ERP jako lead.
+> **Źródło prawdy tej integracji: [`docs/PANELIA-ERP-CONTACT-RUNBOOK.md`](./PANELIA-ERP-CONTACT-RUNBOOK.md).**
+> Poniżej skrót; szczegóły (walidacja, antyspam, rate limit, idempotency, retry, mock, aktywacja,
+> rollback, rotacja tokenu, dane wymagane z ERP) znajdują się w runbooku.
 
-- **Warstwa klienta:** `src/components/ContactForm.astro` waliduje dane i buduje payload.
-- **Warstwa integracji:** `src/lib/contact.ts` → funkcja `sendContactForm(payload)`.
-  Obecnie zwraca stan demonstracyjny; docelowo wykona `fetch` do serwerowego endpointu, który
-  przekaże dane do Fatica ERP.
+Zgłoszenia z formularza kontaktowego trafiają do Fatica ERP jako lead przez **gateway PHP** na
+tym samym hoście (Astro pozostaje static, bez adaptera Node/SSR).
 
-### Rekomendowany przepływ
+- **Warstwa klienta:** `src/components/ContactForm.astro` (UI + walidacja UX) oraz
+  `src/lib/contact.ts` → `sendContactForm(payload, signal)` — wywołuje **wyłącznie** `/api/contact`.
+  Klient nie zna adresu ERP ani tokenu. Tryb demo został usunięty.
+- **Warstwa serwerowa (gateway):** `public/api/contact.php` → po buildzie `dist/api/contact.php`.
+  Waliduje niezależnie, dodaje token (Bearer) po stronie serwera i wywołuje ERP.
+- **Feature flag:** `PUBLIC_CONTACT_FORM_ENABLED` (build-time). Domyślnie `false` → kontakt bezpośredni.
+
+### Przepływ
 
 ```
-Formularz (klient)
-  → endpoint serwerowy strony (proxy, np. Astro server endpoint z adapterem / funkcja serverless)
-  → POST {FATICA_API_URL}/api/public/leads   (nagłówek autoryzacji dodawany po stronie serwera)
+przeglądarka → POST https://paneliastudio.pl/api/contact (Apache rewrite → api/contact.php)
+  → public/api/contact.php  (token wyłącznie po stronie serwera)
+  → POST https://app.fatica.pl/api/public/leads
 ```
 
-Proxy jest konieczne, aby token organizacji nie trafił do przeglądarki.
+Gateway PHP jest konieczny, aby token organizacji nie trafił do przeglądarki. Sekrety pochodzą z
+`getenv()` lub prywatnego pliku `/domains/paneliastudio.pl/private_html/panelia-erp-config.php`
+(wzór: `docs/examples/panelia-erp-config.php.example`).
 
 ### Kształt payloadu (z `ContactPayload`)
 
@@ -108,9 +117,10 @@ rekordów po `slug` lub `externalId`. Minimalny zestaw pól potrzebny stronie:
 
 ## 3. Kolejne kroki wdrożenia (checklista)
 
-- [ ] Dodać serwerowy endpoint proxy dla `POST /api/public/leads` (adapter Astro / serverless).
-- [ ] Skonfigurować zmienne środowiskowe: adres API i token organizacji (poza repo).
-- [ ] Zaimplementować `sendContactForm` tak, aby wywoływała proxy zamiast trybu demo.
+- [x] Serwerowy gateway `public/api/contact.php` (proxy do `POST /api/public/leads`) — **gotowy**.
+- [x] `sendContactForm` wywołuje `/api/contact` (tryb demo usunięty) — **gotowy**.
+- [ ] Skonfigurować sekrety na serwerze: token organizacji w `private_html/panelia-erp-config.php`
+      (poza repo) — **oczekuje na token z Fatica ERP** (patrz runbook, sekcja „Dane wymagane z ERP").
 - [ ] Zaimplementować pobieranie showcase w `getShowcaseProjects()` z fallbackiem lokalnym.
 - [ ] Dodać mapowanie odpowiedzi ERP → `Project` oraz obsługę błędów.
 - [ ] Testy: walidacja `package_interest`, obsługa błędów sieci, zachowanie fallbacku.
