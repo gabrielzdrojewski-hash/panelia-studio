@@ -1,0 +1,39 @@
+---
+import type { MediaItem } from '../lib/media';
+
+interface Props {
+  item: MediaItem;
+  /** Proporcje ramki, np. "4/3", "3/4", "16/9". Jeśli brak — użyj realnych wymiarów obrazu. */
+  ratio?: string;
+  sizes?: string;
+  loading?: 'lazy' | 'eager';
+  class?: string;
+  hoverable?: boolean;
+}
+
+const {
+  item,
+  ratio,
+  sizes = '(max-width: 700px) 100vw, 50vw',
+  loading = 'lazy',
+  class: className,
+  hoverable = false,
+} = Astro.props;
+
+const aspectRatio = ratio ?? `${item.width} / ${item.height}`;
+---
+
+<div
+  class:list={['media-frame', { hoverable }, className]}
+  style={`aspect-ratio: ${aspectRatio};`}
+>
+  <img
+    src={item.path}
+    alt={item.alt}
+    width={item.width}
+    height={item.height}
+    loading={loading}
+    decoding="async"
+    sizes={sizes}
+  />
+</div>

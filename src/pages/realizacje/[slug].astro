@@ -1,0 +1,200 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Gallery from '../../components/Gallery.astro';
+import { projects, getProject } from '../../data/projects';
+import { getByCollection, getMediaById } from '../../lib/media';
+import { mediaNotes } from '../../data/content';
+import { site } from '../../data/site';
+
+export function getStaticPaths() {
+  return projects.map((project) => ({ params: { slug: project.slug } }));
+}
+
+const { slug } = Astro.params;
+const project = getProject(slug!)!;
+
+const cover = getMediaById(project.coverId)!;
+const realizations = getByCollection('realization', project.realizationCollection);
+const visualizations = project.visualizationCollection
+  ? getByCollection('visualization', project.visualizationCollection)
+  : [];
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Realizacje', item: new URL('/realizacje', site.url).href },
+    {
+      '@type': 'ListItem',
+      position: 2,
+      name: project.name,
+      item: new URL(`/realizacje/${project.slug}`, site.url).href,
+    },
+  ],
+};
+---
+
+<BaseLayout
+  title={`Realizacja: ${project.name}`}
+  description={`Realizacja Panelia Studio — ${project.name}. Zdjęcia z wykonanego wnętrza oraz wizualizacje projektowe.`}
+  path={`/realizacje/${project.slug}`}
+  image={cover.path}
+  structuredData={structuredData}
+  headerVariant="overlay"
+>
+  <!-- HERO PROJEKTU -->
+  <section class="case-hero">
+    <div class="case-hero-media">
+      <img
+        src={cover.path}
+        alt={cover.alt}
+        width={cover.width}
+        height={cover.height}
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+      />
+      <span class="case-hero-overlay" aria-hidden="true"></span>
+    </div>
+    <div class="container case-hero-content">
+      <a href="/realizacje" class="case-back">← Realizacje</a>
+      <p class="case-eyebrow" data-reveal>{project.location}</p>
+      <h1 class="case-title" data-reveal style="--reveal-delay: 60ms">{project.name}</h1>
+      <ul class="case-scope" data-reveal style="--reveal-delay: 120ms">
+        {project.scope.map((item) => <li>{item}</li>)}
+      </ul>
+    </div>
+  </section>
+
+  <section class="section-tight">
+    <div class="container container-narrow">
+      <p class="lead case-intro" data-reveal>{project.intro}</p>
+    </div>
+  </section>
+
+  <!-- ZDJĘCIA Z REALIZACJI -->
+  <section class="section-tight">
+    <div class="container">
+      <div class="case-block-head" data-reveal>
+        <div>
+          <p class="eyebrow">Zdjęcia z realizacji</p>
+          <h2>Wykonane wnętrze</h2>
+        </div>
+        <p class="muted case-note">{mediaNotes.realizations}</p>
+      </div>
+      <Gallery id={`case-real-${project.slug}`} items={realizations} badge="Realizacja" columns={3} />
+    </div>
+  </section>
+
+  <!-- WIZUALIZACJE PROJEKTOWE -->
+  {
+    visualizations.length > 0 && (
+      <section class="section section-surface">
+        <div class="container">
+          <div class="case-block-head" data-reveal>
+            <div>
+              <p class="eyebrow">Od koncepcji do realizacji</p>
+              <h2>Wizualizacje projektowe</h2>
+            </div>
+            <p class="muted case-note">{mediaNotes.visualizations}</p>
+          </div>
+          <Gallery
+            id={`case-viz-${project.slug}`}
+            items={visualizations}
+            badge="Wizualizacja projektowa"
+            badgeViz={true}
+            columns={3}
+          />
+        </div>
+      </section>
+    )
+  }
+
+  <section class="section section-dark">
+    <div class="container container-narrow case-cta" data-reveal>
+      <h2>Zaprojektujmy Twoje wnętrze</h2>
+      <p class="lead">Umów konsultację — poprowadzimy Twój projekt od koncepcji po realizację.</p>
+      <div class="case-cta-actions">
+        <a href="/kontakt" class="btn">Umów konsultację</a>
+        <a href="/realizacje" class="btn btn-ghost">Wróć do katalogu</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .case-hero {
+    position: relative;
+    min-height: min(84svh, 720px);
+    display: flex;
+    align-items: flex-end;
+    padding-block: clamp(120px, 16vh, 190px) clamp(40px, 7vw, 96px);
+    color: var(--on-dark);
+    overflow: hidden;
+  }
+  .case-hero-media { position: absolute; inset: 0; z-index: 0; }
+  .case-hero-media img { width: 100%; height: 100%; object-fit: cover; }
+  .case-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(15, 13, 9, 0.35) 0%, rgba(15, 13, 9, 0.15) 40%, rgba(15, 13, 9, 0.75) 100%);
+  }
+  .case-hero-content { position: relative; z-index: 1; }
+  .case-back {
+    display: inline-block;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: rgba(243, 239, 230, 0.85);
+    margin-bottom: 1.4rem;
+    transition: color 0.2s ease;
+  }
+  .case-back:hover { color: #fff; }
+  .case-eyebrow {
+    font-size: 0.74rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin: 0 0 1rem;
+  }
+  .case-title { color: #fff; font-size: clamp(2.6rem, 7vw, 5rem); }
+  .case-scope {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 1.6rem 0 0;
+    padding: 0;
+  }
+  .case-scope li {
+    font-size: 0.76rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--on-dark);
+    padding: 0.5em 1em;
+    border: 1px solid rgba(243, 239, 230, 0.32);
+    border-radius: 999px;
+  }
+
+  .case-intro { max-width: 68ch; }
+
+  .case-block-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+    margin-bottom: clamp(24px, 3vw, 40px);
+    flex-wrap: wrap;
+  }
+  .case-note { max-width: 42ch; font-size: 0.92rem; }
+
+  .case-cta {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+  }
+  .case-cta-actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 0.5rem; }
+</style>

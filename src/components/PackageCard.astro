@@ -1,0 +1,109 @@
+---
+import type { Package } from '../data/packages';
+
+interface Props {
+  pkg: Package;
+  index: number;
+}
+const { pkg, index } = Astro.props;
+
+// 5–7 najważniejszych elementów zakresu (skrót — pełny zakres na /pakiety).
+const keyItems = pkg.scope.slice(0, 6);
+---
+
+<article class="package-card" data-reveal style={`--reveal-delay: ${(index % 3) * 90}ms`}>
+  <div class="package-card-grid" aria-hidden="true"></div>
+  <div class="package-card-body">
+    <header class="package-head">
+      <span class="package-short">{pkg.short}</span>
+      <h3 class="package-name">{pkg.name}</h3>
+      <p class="package-kind">{pkg.kind}</p>
+    </header>
+
+    <p class="package-intro muted">{pkg.intro}</p>
+
+    <ul class="package-items">
+      {keyItems.map((item) => <li>{item}</li>)}
+    </ul>
+
+    <a href={`/pakiety#${pkg.slug}`} class="link-arrow package-link">Zobacz pełny zakres</a>
+  </div>
+</article>
+
+<style>
+  .package-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    height: 100%;
+    transition: border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
+  }
+  .package-card:hover {
+    border-color: var(--gold);
+    box-shadow: var(--shadow-card);
+    transform: translateY(-5px);
+  }
+  /* Subtelny rysunek architektoniczny w tle */
+  .package-card-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.35;
+    -webkit-mask-image: radial-gradient(120% 80% at 100% 0%, #000 0%, transparent 60%);
+    mask-image: radial-gradient(120% 80% at 100% 0%, #000 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .package-card-body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: clamp(28px, 3vw, 40px);
+    height: 100%;
+  }
+
+  .package-head { display: flex; flex-direction: column; gap: 6px; }
+  .package-short {
+    font-size: 0.72rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--accent-deep);
+  }
+  .package-name { font-size: clamp(1.6rem, 2.2vw, 2rem); margin-top: 4px; }
+  .package-kind { font-size: 0.8rem; letter-spacing: 0.02em; color: var(--muted); margin: 0; }
+  .package-intro { font-size: 0.98rem; line-height: 1.55; }
+
+  .package-items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    flex-grow: 1;
+  }
+  .package-items li {
+    position: relative;
+    padding-left: 24px;
+    font-size: 0.94rem;
+    line-height: 1.45;
+    color: var(--ink-90);
+  }
+  .package-items li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5em;
+    width: 8px;
+    height: 8px;
+    background: var(--gold);
+    transform: rotate(45deg);
+  }
+  .package-link { margin-top: 6px; }
+</style>

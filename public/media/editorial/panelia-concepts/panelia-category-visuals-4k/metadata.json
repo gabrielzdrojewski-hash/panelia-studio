@@ -1,0 +1,102 @@
+[
+  {
+    "file": "01-panelia-hero-cathedral-living-01.jpg",
+    "title": "Hero strony głównej",
+    "mediaType": "editorial_generated_concept",
+    "publicLabel": "Wizualizacja koncepcyjna",
+    "usage": "home_hero",
+    "width": 3840,
+    "height": 2160,
+    "status": "approved_for_editorial_review"
+  },
+  {
+    "file": "02-panelia-projekt-funkcjonalny-01.jpg",
+    "title": "Projekt funkcjonalny",
+    "mediaType": "editorial_generated_concept",
+    "publicLabel": "Wizualizacja koncepcyjna",
+    "usage": "service_functional_design",
+    "width": 3840,
+    "height": 2160,
+    "status": "approved_for_editorial_review"
+  },
+  {
+    "file": "03-panelia-koncepcja-wnetrza-01.jpg",
+    "title": "Koncepcja wnętrza",
+    "mediaType": "editorial_generated_concept",
+    "publicLabel": "Wizualizacja koncepcyjna",
+    "usage": "service_concept",
+    "width": 3840,
+    "height": 2160,
+    "status": "approved_for_editorial_review"
+  },
+  {
+    "file": "04-panelia-wizualizacje-3d-01.jpg",
+    "title": "Wizualizacje 3D",
+    "mediaType": "editorial_generated_concept",
+    "publicLabel": "Wizualizacja koncepcyjna",
+    "usage": "service_3d_visualization",
+    "width": 3840,
+    "height": 2160,
+    "status": "approved_for_editorial_review"
+  },
+  {
+    "file": "05-panelia-dokumentacja-wykonawcza-01.jpg",
+    "title": "Dokumentacja wykonawcza",
+    "mediaType": "editorial_generated_concept",
+    "publicLabel": "Wizualizacja koncepcyjna",
+    "usage": "service_documentation",
+    "width": 3840,
+    "height": 2160,
+    "status": "approved_for_editorial_review"
+  },
+  {
+    "file": "06-panelia-dobor-materialow-01.jpg",
+    "title": "Dobór materiałów",
+    "mediaType": "editorial_generated_concept",
+    "publicLabel": "Wizualizacja koncepcyjna",
+    "usage": "service_material_selection",
+    "width": 3840,
+    "height": 2160,
+    "status": "approved_for_editorial_review"
+  },
+  {
+    "file": "07-panelia-panele-dekoracyjne-weglowe-01.jpg",
+    "title": "Panele dekoracyjne i węglowe",
+    "mediaType": "editorial_generated_concept",
+    "publicLabel": "Wizualizacja koncepcyjna",
+    "usage": "service_decorative_surfaces",
+    "width": 3840,
+    "height": 2160,
+    "status": "approved_for_editorial_review"
+  },
+  {
+    "file": "08-panelia-sufity-i-oswietlenie-01.jpg",
+    "title": "Sufity i oświetlenie",
+    "mediaType": "editorial_generated_concept",
+    "publicLabel": "Wizualizacja koncepcyjna",
+    "usage": "service_ceiling_lighting",
+    "width": 3840,
+    "height": 2160,
+    "status": "approved_for_editorial_review"
+  },
+  {
+    "file": "09-panelia-koordynacja-realizacji-01.jpg",
+    "title": "Koordynacja realizacji",
+    "mediaType": "editorial_generated_concept",
+    "publicLabel": "Wizualizacja koncepcyjna",
+    "usage": "service_coordination",
+    "width": 3840,
+    "height": 2160,
+    "status": "approved_for_editorial_review"
+  },
+  {
+    "file": "10-panelia-odbior-i-wsparcie-01.jpg",
+    "title": "Odbiór i wsparcie",
+    "mediaType": "editorial_generated_concept",
+    "publicLabel": "Wizualizacja koncepcyjna",
+    "usage": "service_handover",
+    "width": 3840,
+    "height": 2160,
+    "status": "approved_for_editorial_review"
+  }
+]

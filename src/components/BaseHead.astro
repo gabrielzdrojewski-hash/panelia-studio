@@ -1,0 +1,101 @@
+---
+import { site, contact } from '../data/site';
+
+interface Props {
+  title: string;
+  description?: string;
+  path: string; // Ścieżka bieżącej strony, np. "/oferta".
+  image?: string; // Ścieżka względna do obrazu OG (opcjonalnie).
+  noindex?: boolean;
+  /** Dodatkowe dane strukturalne JSON-LD (obiekt lub tablica). */
+  structuredData?: unknown;
+  /** Preload obrazu LCP (np. pierwszy slajd hero). */
+  preloadImage?: { href: string; srcset?: string; sizes?: string };
+}
+
+const {
+  title,
+  description = site.description,
+  path,
+  image = site.ogImage,
+  noindex = false,
+  structuredData,
+  preloadImage,
+} = Astro.props;
+
+const canonical = new URL(path, site.url).href;
+const ogImageUrl = new URL(image, site.url).href;
+const fullTitle = path === '/' ? `${site.name} — ${site.tagline}` : `${title} — ${site.name}`;
+
+// Bazowe dane strukturalne: lokalna firma projektowo-wykończeniowa.
+const organizationLd = {
+  '@context': 'https://schema.org',
+  '@type': 'LocalBusiness',
+  '@id': `${site.url}/#organization`,
+  name: site.name,
+  url: site.url,
+  image: ogImageUrl,
+  logo: new URL('/brand/panelia-logo-dark-horizontal.svg', site.url).href,
+  description: site.description,
+  telephone: contact.phone,
+  email: contact.email,
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: contact.address.street,
+    postalCode: contact.address.postalCode,
+    addressLocality: contact.address.city,
+    addressCountry: contact.address.countryCode,
+  },
+  areaServed: 'PL',
+};
+---
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="generator" content={Astro.generator} />
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+
+{
+  preloadImage && (
+    <link
+      rel="preload"
+      as="image"
+      href={preloadImage.href}
+      imagesrcset={preloadImage.srcset}
+      imagesizes={preloadImage.sizes}
+      fetchpriority="high"
+    />
+  )
+}
+
+<!-- Ikony -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/brand/panelia-mark-dark.png" />
+<meta name="theme-color" content="#f6f4ef" />
+
+<!-- Open Graph -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content={site.name} />
+<meta property="og:locale" content={site.locale} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={ogImageUrl} />
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImageUrl} />
+
+<!-- Dane strukturalne -->
+<script type="application/ld+json" set:html={JSON.stringify(organizationLd)} is:inline />
+{
+  structuredData && (
+    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} is:inline />
+  )
+}

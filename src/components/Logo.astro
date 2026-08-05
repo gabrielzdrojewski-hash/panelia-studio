@@ -1,0 +1,26 @@
+---
+interface Props {
+  variant?: 'dark' | 'light'; // dark = ciemne logo na jasnym tle; light = jasne na ciemnym.
+  kind?: 'full' | 'mark'; // full = pełne logo, mark = sygnet.
+  width?: number;
+  class?: string;
+}
+
+const { variant = 'dark', kind = 'full', width, class: className } = Astro.props;
+
+const src =
+  kind === 'mark'
+    ? `/brand/panelia-mark-${variant}.svg`
+    : `/brand/panelia-logo-${variant}-horizontal.svg`;
+
+const defaultWidth = kind === 'mark' ? 40 : 168;
+---
+
+<img
+  src={src}
+  alt="Panelia Studio"
+  width={width ?? defaultWidth}
+  class={className}
+  loading="eager"
+  decoding="async"
+/>

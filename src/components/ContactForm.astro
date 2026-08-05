@@ -1,0 +1,315 @@
+---
+import { packageOptions } from '../lib/contact';
+
+const groups = [...new Set(packageOptions.map((option) => option.group))];
+---
+
+<form class="contact-form" novalidate data-contact-form aria-describedby="form-status">
+  <div class="field">
+    <label for="cf-name">Imię i nazwisko <span aria-hidden="true">*</span></label>
+    <input
+      type="text"
+      id="cf-name"
+      name="name"
+      autocomplete="name"
+      required
+      aria-required="true"
+      aria-describedby="cf-name-error"
+    />
+    <p class="field-error" id="cf-name-error" data-error hidden></p>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="cf-email">E-mail <span aria-hidden="true">*</span></label>
+      <input
+        type="email"
+        id="cf-email"
+        name="email"
+        autocomplete="email"
+        required
+        aria-required="true"
+        aria-describedby="cf-email-error"
+      />
+      <p class="field-error" id="cf-email-error" data-error hidden></p>
+    </div>
+
+    <div class="field">
+      <label for="cf-phone">Telefon</label>
+      <input
+        type="tel"
+        id="cf-phone"
+        name="phone"
+        autocomplete="tel"
+        inputmode="tel"
+        aria-describedby="cf-phone-error"
+      />
+      <p class="field-error" id="cf-phone-error" data-error hidden></p>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="cf-package">Interesujący pakiet (opcjonalnie)</label>
+    <select id="cf-package" name="package_interest">
+      <option value="">Nie wiem jeszcze / do ustalenia</option>
+      {
+        groups.map((group) => (
+          <optgroup label={group}>
+            {packageOptions
+              .filter((option) => option.group === group)
+              .map((option) => <option value={option.value}>{option.label}</option>)}
+          </optgroup>
+        ))
+      }
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="cf-message">Wiadomość <span aria-hidden="true">*</span></label>
+    <textarea
+      id="cf-message"
+      name="message"
+      rows="5"
+      required
+      aria-required="true"
+      aria-describedby="cf-message-error"
+    ></textarea>
+    <p class="field-error" id="cf-message-error" data-error hidden></p>
+  </div>
+
+  <!-- Pole pułapka (honeypot) — ukryte przed użytkownikiem, wypełniają je boty -->
+  <div class="hp-field" aria-hidden="true">
+    <label for="cf-company">Nazwa firmy (nie wypełniaj)</label>
+    <input type="text" id="cf-company" name="company" tabindex="-1" autocomplete="off" />
+  </div>
+
+  <div class="field field-consent">
+    <label class="consent">
+      <input type="checkbox" name="consent" required aria-required="true" aria-describedby="cf-consent-error" />
+      <span>
+        Wyrażam zgodę na przetwarzanie moich danych osobowych w celu obsługi zapytania, zgodnie z
+        <a href="/polityka-prywatnosci"> polityką prywatności</a>. <span aria-hidden="true">*</span>
+      </span>
+    </label>
+    <p class="field-error" id="cf-consent-error" data-error hidden></p>
+  </div>
+
+  <button type="submit" class="btn contact-submit">Wyślij zapytanie</button>
+
+  <p class="form-status" id="form-status" role="status" aria-live="polite" data-status hidden></p>
+</form>
+
+<style>
+  .contact-form { display: flex; flex-direction: column; gap: 26px; }
+
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 560px) { .field-row { grid-template-columns: 1fr; } }
+
+  .field { display: flex; flex-direction: column; gap: 8px; }
+
+  label {
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  input,
+  textarea,
+  select {
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    color: var(--ink);
+    background: var(--surface-2, #fff);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    padding: 1.05em 1.2em;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+  }
+  textarea { resize: vertical; min-height: 150px; }
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--accent-deep);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  input[aria-invalid='true'],
+  textarea[aria-invalid='true'] { border-color: #b4482f; }
+
+  .field-error {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #b4482f;
+    letter-spacing: 0;
+    text-transform: none;
+    font-weight: 500;
+  }
+  .field-error[hidden] { display: none; }
+
+  .consent {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.92rem;
+    font-weight: 400;
+    color: var(--ink-90);
+    line-height: 1.55;
+    cursor: pointer;
+  }
+  .consent input {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    accent-color: var(--accent-deep);
+  }
+  .consent a { text-decoration: underline; text-underline-offset: 2px; }
+
+  /* Honeypot — całkowicie ukryte, poza widokiem i dostępnością */
+  .hp-field {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+  }
+
+  .contact-submit { align-self: flex-start; margin-top: 4px; }
+
+  .form-status {
+    margin: 0;
+    padding: 1em 1.2em;
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  .form-status[hidden] { display: none; }
+  .form-status[data-variant='success'] {
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+    border: 1px solid var(--accent);
+    color: var(--accent-deep);
+  }
+  .form-status[data-variant='error'] {
+    background: #fbeae5;
+    border: 1px solid #d98a72;
+    color: #8f3419;
+  }
+</style>
+
+<script>
+  import { sendContactForm } from '../lib/contact';
+  import type { ContactPayload } from '../lib/contact';
+
+  const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
+  if (form) {
+    const status = form.querySelector<HTMLElement>('[data-status]');
+
+    // Wstępny wybór pakietu na podstawie parametru URL, np. /kontakt?pakiet=panelia_signature
+    const preselect = new URLSearchParams(window.location.search).get('pakiet');
+    if (preselect) {
+      const select = form.querySelector<HTMLSelectElement>('#cf-package');
+      if (select && [...select.options].some((option) => option.value === preselect)) {
+        select.value = preselect;
+      }
+    }
+
+    const setError = (name: string, message: string | null) => {
+      const input = form.querySelector<HTMLElement>(`[name="${name}"]`);
+      const errorEl = form.querySelector<HTMLElement>(`#cf-${name}-error`);
+      if (input) {
+        if (message) input.setAttribute('aria-invalid', 'true');
+        else input.removeAttribute('aria-invalid');
+      }
+      if (errorEl) {
+        errorEl.textContent = message ?? '';
+        errorEl.hidden = !message;
+      }
+    };
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phonePattern = /^[+]?[\d\s()-]{7,}$/;
+
+    const showStatus = (message: string, variant: 'success' | 'error') => {
+      if (!status) return;
+      status.textContent = message;
+      status.dataset.variant = variant;
+      status.hidden = false;
+    };
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const data = new FormData(form);
+
+      // Honeypot — jeśli wypełniony, przerwij po cichu (prawdopodobnie bot).
+      if ((data.get('company') as string)?.trim()) return;
+
+      const name = (data.get('name') as string)?.trim() ?? '';
+      const email = (data.get('email') as string)?.trim() ?? '';
+      const phone = (data.get('phone') as string)?.trim() ?? '';
+      const message = (data.get('message') as string)?.trim() ?? '';
+      const consent = data.get('consent') === 'on';
+
+      let valid = true;
+      const fail = (field: string, msg: string) => {
+        setError(field, msg);
+        valid = false;
+      };
+
+      setError('name', null);
+      setError('email', null);
+      setError('phone', null);
+      setError('message', null);
+      setError('consent', null);
+
+      if (name.length < 2) fail('name', 'Podaj imię i nazwisko.');
+      if (!email) fail('email', 'Podaj adres e-mail.');
+      else if (!emailPattern.test(email)) fail('email', 'Podaj poprawny adres e-mail.');
+      if (phone && !phonePattern.test(phone)) fail('phone', 'Podaj poprawny numer telefonu.');
+      if (message.length < 10) fail('message', 'Wiadomość powinna mieć co najmniej 10 znaków.');
+      if (!consent) fail('consent', 'Zgoda jest wymagana, aby wysłać zapytanie.');
+
+      if (!valid) {
+        form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+        return;
+      }
+
+      const payload: ContactPayload = {
+        name,
+        email,
+        phone,
+        packageInterest: (data.get('package_interest') as ContactPayload['packageInterest']) ?? '',
+        message,
+        consent,
+        submittedAt: new Date().toISOString(),
+      };
+
+      const submitBtn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Wysyłanie…';
+      }
+
+      try {
+        const result = await sendContactForm(payload);
+        showStatus(result.message, 'success');
+        form.reset();
+      } catch {
+        showStatus('Coś poszło nie tak. Prosimy o kontakt telefoniczny lub e-mailowy.', 'error');
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Wyślij zapytanie';
+        }
+      }
+    });
+  }
+</script>

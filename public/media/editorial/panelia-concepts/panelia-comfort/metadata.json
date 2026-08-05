@@ -1,0 +1,29 @@
+{
+  "package": "panelia_comfort",
+  "classification": "editorial_generated_concept",
+  "publicLabel": "Wizualizacja koncepcyjna",
+  "projects": [
+    {
+      "slug": "panelia-comfort-01-cieple-greige-mieszkanie",
+      "style": "warm contemporary greige",
+      "files": [
+        "panelia-comfort-01-gabinet-pokoj-goscinny.png",
+        "panelia-comfort-01-lazienka.png",
+        "panelia-comfort-01-przedpokoj.png",
+        "panelia-comfort-01-salon-z-aneksem.png",
+        "panelia-comfort-01-sypialnia.png"
+      ]
+    },
+    {
+      "slug": "panelia-comfort-02-soft-japandi-mieszkanie",
+      "style": "soft contemporary japandi",
+      "files": [
+        "panelia-comfort-02-gabinet-pokoj-goscinny.png",
+        "panelia-comfort-02-lazienka.png",
+        "panelia-comfort-02-przedpokoj.png",
+        "panelia-comfort-02-salon-z-aneksem.png",
+        "panelia-comfort-02-sypialnia.png"
+      ]
+    }
+  ]
+}

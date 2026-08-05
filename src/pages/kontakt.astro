@@ -1,0 +1,148 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ContactForm from '../components/ContactForm.astro';
+import { contact } from '../data/site';
+---
+
+<BaseLayout
+  title="Kontakt"
+  description="Skontaktuj się z Panelia Studio. Umów niezobowiązującą konsultację — telefonicznie, e-mailowo lub przez formularz."
+  path="/kontakt"
+  headerVariant="overlay-dark"
+>
+  <section class="contact section-dark">
+    <span class="contact-bgword" aria-hidden="true">POROZMAWIAJMY</span>
+
+    <div class="container contact-inner">
+      <div class="contact-left">
+        <div class="contact-left-sticky" data-reveal>
+          <p class="eyebrow">Kontakt</p>
+          <h1 class="contact-title">Porozmawiajmy<br />o Twoim <span class="gold">wnętrzu</span></h1>
+          <p class="lead contact-lead">
+            Umów niezobowiązującą konsultację. Odpowiemy na pytania i podpowiemy, jak możemy
+            poprowadzić Twój projekt.
+          </p>
+
+          <div class="contact-details">
+            <a href={`tel:${contact.phoneHref}`} class="contact-detail">
+              <span class="contact-detail-label">Telefon</span>
+              <span class="contact-detail-value">{contact.phone}</span>
+            </a>
+            <a href={`mailto:${contact.email}`} class="contact-detail">
+              <span class="contact-detail-label">E-mail</span>
+              <span class="contact-detail-value">{contact.email}</span>
+            </a>
+            <div class="contact-detail">
+              <span class="contact-detail-label">Adres</span>
+              <address class="contact-detail-value">
+                {contact.address.street}, {contact.address.postalCode} {contact.address.city}
+              </address>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="contact-right" data-reveal style="--reveal-delay: 120ms">
+        <div class="contact-form-panel">
+          <h2 class="contact-form-title">Napisz do nas</h2>
+          <p class="muted contact-form-intro">Pola oznaczone gwiazdką (*) są wymagane.</p>
+          <ContactForm />
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .contact {
+    position: relative;
+    overflow: hidden;
+    padding-block: clamp(112px, 13vw, 190px) clamp(88px, 12vw, 170px);
+  }
+
+  /* Gigantyczny, przycięty napis dekoracyjny w tle */
+  .contact-bgword {
+    position: absolute;
+    left: -0.06em;
+    bottom: -0.14em;
+    z-index: 0;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(4.5rem, 19vw, 21rem);
+    line-height: 0.8;
+    letter-spacing: -0.05em;
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(243, 239, 230, 0.1);
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .contact-inner {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 480px;
+    gap: clamp(36px, 5vw, 88px);
+    align-items: start;
+  }
+  @media (max-width: 1080px) { .contact-inner { grid-template-columns: 1fr; } }
+
+  .contact-title {
+    color: #fff;
+    font-size: clamp(2.6rem, 5vw, 4.75rem);
+    line-height: 0.98;
+    margin-bottom: 1.6rem;
+  }
+  .contact-lead { color: var(--on-dark); max-width: 40ch; }
+
+  .contact-details {
+    margin-top: clamp(32px, 4vw, 52px);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .contact-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 20px 0;
+    border-top: 1px solid rgba(243, 239, 230, 0.14);
+  }
+  .contact-detail:last-child { border-bottom: 1px solid rgba(243, 239, 230, 0.14); }
+  .contact-detail-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--on-dark-gold);
+  }
+  .contact-detail-value { font-size: clamp(1.15rem, 1.6vw, 1.5rem); font-weight: 600; color: var(--on-dark); font-style: normal; }
+  a.contact-detail:hover .contact-detail-value { color: var(--gold); }
+
+  .contact-form-panel {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: clamp(30px, 3vw, 46px);
+    box-shadow: var(--shadow-soft);
+  }
+  .contact-form-title { color: var(--ink); margin-bottom: 0.6rem; }
+  .contact-form-intro { margin-bottom: 1.9rem; }
+
+  /* Sticky formularza — tylko na wysokich ekranach desktopowych, z bezpiecznym offsetem
+     pod headerem. Na niższych/tabletach/mobile: normalny układ dokumentu. */
+  @media (min-width: 1081px) and (min-height: 900px) {
+    .contact-right { position: sticky; top: calc(var(--header-height) + 32px); }
+  }
+
+  /* Napis dekoracyjny mniejszy i subtelniejszy na mobile */
+  @media (max-width: 640px) {
+    .contact-bgword {
+      font-size: clamp(3.5rem, 26vw, 7rem);
+      -webkit-text-stroke-color: rgba(243, 239, 230, 0.08);
+      bottom: -0.08em;
+    }
+  }
+</style>

@@ -1,0 +1,158 @@
+---
+import type { ComparisonSet } from '../data/packages';
+import InfoTooltip from './InfoTooltip.astro';
+import { getGlossary } from '../data/comparisonGlossary';
+
+interface Props {
+  set: ComparisonSet;
+  caption: string;
+  firstCol?: string;
+  highlightLast?: boolean; // wyróżnij ostatnią kolumnę (np. PREMIUM / SIGNATURE)
+  idPrefix?: string; // prefiks unikalnych id tooltipów (unikalny na stronie)
+}
+const { set, caption, firstCol = 'Zakres', highlightLast = false, idPrefix = 'cmp' } = Astro.props;
+const lastIndex = set.columns.length - 1;
+
+function isYes(value: string): boolean {
+  return value === '✓';
+}
+function isNo(value: string): boolean {
+  return value === '—';
+}
+---
+
+<div class="cmp">
+  <div class="cmp-scroll" role="region" aria-label={caption} tabindex="0">
+    <table class="cmp-table">
+      <caption class="sr-only">{caption}</caption>
+      <thead>
+        <tr>
+          <th scope="col" class="cmp-feature-head">{firstCol}</th>
+          {
+            set.columns.map((col, i) => (
+              <th
+                scope="col"
+                class:list={['cmp-pkg-head', { 'cmp-col-highlight': highlightLast && i === lastIndex }]}
+              >
+                {col}
+              </th>
+            ))
+          }
+        </tr>
+      </thead>
+      <tbody>
+        {
+          set.rows.map((row, rowIndex) => (
+            <tr>
+              <th scope="row" class="cmp-feature">{row.feature}</th>
+              {row.values.map((value, i) => {
+                const infoKey = row.info?.[i] ?? null;
+                const entry = infoKey ? getGlossary(infoKey) : undefined;
+                return (
+                  <td
+                    class:list={[
+                      'cmp-cell',
+                      { yes: isYes(value), no: isNo(value), 'cmp-col-highlight': highlightLast && i === lastIndex },
+                    ]}
+                  >
+                    <span class="cmp-val">
+                      {isYes(value) ? (
+                        <span class="cmp-yes" aria-label="w zakresie">✓</span>
+                      ) : isNo(value) ? (
+                        <span class="cmp-no" aria-label="poza zakresem">—</span>
+                      ) : (
+                        <span class={entry ? 'cmp-val-text' : ''}>{value}</span>
+                      )}
+                      {entry && (
+                        <InfoTooltip
+                          id={`${idPrefix}-${rowIndex}-${i}`}
+                          term={entry.term}
+                          body={entry.body}
+                        />
+                      )}
+                    </span>
+                  </td>
+                );
+              })}
+            </tr>
+          ))
+        }
+      </tbody>
+    </table>
+  </div>
+  <p class="cmp-note muted">Zakres orientacyjny — szczegóły ustalamy indywidualnie w ofercie.</p>
+</div>
+
+<style>
+  .cmp-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+  .cmp-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 620px;
+    background: var(--surface);
+  }
+  .cmp-table th,
+  .cmp-table td { text-align: left; vertical-align: top; }
+
+  .cmp-feature-head,
+  .cmp-pkg-head {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--ink);
+    padding: 14px 18px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .cmp-pkg-head { text-align: center; }
+
+  .cmp-feature {
+    font-weight: 500;
+    font-size: 0.92rem;
+    color: var(--ink-90);
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    left: 0;
+    background: var(--surface);
+    min-width: 180px;
+  }
+  .cmp-cell {
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--ink-90);
+    padding: 13px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .cmp-cell.yes .cmp-yes { color: var(--accent-deep); font-weight: 700; font-size: 1.05rem; }
+  .cmp-cell.no .cmp-no { color: var(--line-strong); }
+
+  .cmp-val { display: inline-flex; align-items: baseline; justify-content: center; }
+  .cmp-val-text {
+    text-decoration: underline dotted;
+    text-decoration-color: var(--line-strong);
+    text-underline-offset: 3px;
+  }
+
+  /* Wyróżniona kolumna (PREMIUM / SIGNATURE) */
+  .cmp-pkg-head.cmp-col-highlight {
+    background: color-mix(in srgb, var(--gold) 16%, var(--paper)) !important;
+    color: var(--accent-deep);
+  }
+  .cmp-cell.cmp-col-highlight {
+    background: color-mix(in srgb, var(--gold) 8%, var(--surface)) !important;
+  }
+
+  tbody tr:nth-child(even) .cmp-feature,
+  tbody tr:nth-child(even) .cmp-cell { background: color-mix(in srgb, var(--paper) 55%, var(--surface)); }
+  tbody tr:nth-child(even) .cmp-feature { background: color-mix(in srgb, var(--paper) 55%, var(--surface)); }
+
+  .cmp-note { margin-top: 14px; font-size: 0.85rem; }
+</style>

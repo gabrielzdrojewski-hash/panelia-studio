@@ -1,0 +1,187 @@
+---
+// Dostępny tooltip/popover objaśnienia. Bez bibliotek.
+// Otwieranie: hover, focus (klawiatura), kliknięcie (dotyk). Zamknięcie: klik poza, Escape.
+// Popover pozycjonowany `position: fixed` (nie jest przycinany przez kontener z overflow).
+interface Props {
+  id: string; // unikalny w obrębie strony
+  term: string;
+  body: string;
+}
+const { id, term, body } = Astro.props;
+const btnId = `${id}-btn`;
+const popId = `${id}-pop`;
+---
+
+<span class="tt" data-tooltip>
+  <button
+    type="button"
+    class="tt-btn"
+    id={btnId}
+    aria-expanded="false"
+    aria-controls={popId}
+    aria-label={`Wyjaśnienie: ${term}`}
+  >
+    <span aria-hidden="true">i</span>
+  </button>
+  <span class="tt-pop" id={popId} role="tooltip" hidden>
+    <strong class="tt-term">{term}</strong>
+    <span class="tt-body">{body}</span>
+  </span>
+</span>
+
+<style>
+  .tt {
+    display: inline-flex;
+    vertical-align: baseline;
+    margin-left: 6px;
+  }
+  .tt-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid var(--line-strong);
+    background: transparent;
+    color: var(--accent-deep);
+    font-family: var(--font-body);
+    font-size: 0.66rem;
+    font-weight: 700;
+    font-style: italic;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  }
+  .tt-btn:hover { background: color-mix(in srgb, var(--gold) 18%, transparent); border-color: var(--gold); }
+  .tt-btn:focus-visible {
+    outline: 2px solid var(--accent-deep);
+    outline-offset: 2px;
+  }
+  .tt-btn[aria-expanded='true'] { background: var(--gold); border-color: var(--gold); color: var(--dark); }
+
+  .tt-pop {
+    position: fixed;
+    z-index: 60;
+    width: min(280px, calc(100vw - 32px));
+    padding: 12px 14px;
+    background: var(--dark);
+    color: var(--on-dark);
+    border-radius: 8px;
+    box-shadow: 0 18px 45px -18px rgba(0, 0, 0, 0.55);
+    font-size: 0.82rem;
+    line-height: 1.5;
+    letter-spacing: 0;
+    text-transform: none;
+    text-align: left;
+  }
+  .tt-pop[hidden] { display: none; }
+  .tt-term {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--on-dark-gold);
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .tt-body { display: block; color: var(--on-dark); font-weight: 400; }
+</style>
+
+<script>
+  // Jeden globalny kontroler dla wszystkich tooltipów na stronie.
+  (() => {
+    if ((window as any).__ttInit) return;
+    (window as any).__ttInit = true;
+
+    let openWrap: HTMLElement | null = null;
+
+    const pop = (wrap: HTMLElement) => wrap.querySelector<HTMLElement>('.tt-pop');
+    const btn = (wrap: HTMLElement) => wrap.querySelector<HTMLButtonElement>('.tt-btn');
+
+    function position(wrap: HTMLElement) {
+      const b = btn(wrap);
+      const p = pop(wrap);
+      if (!b || !p) return;
+      const r = b.getBoundingClientRect();
+      // Zmierz po pokazaniu.
+      const pw = p.offsetWidth;
+      const ph = p.offsetHeight;
+      let left = r.left + r.width / 2 - pw / 2;
+      left = Math.max(16, Math.min(left, window.innerWidth - pw - 16));
+      let top = r.top - ph - 10; // domyślnie nad przyciskiem
+      if (top < 12) top = r.bottom + 10; // brak miejsca u góry → pod przyciskiem
+      // Zabezpieczenie na małych ekranach: nie wychodź poza dolną krawędź.
+      top = Math.max(12, Math.min(top, window.innerHeight - ph - 12));
+      p.style.left = `${Math.round(left)}px`;
+      p.style.top = `${Math.round(top)}px`;
+    }
+
+    function open(wrap: HTMLElement) {
+      if (openWrap && openWrap !== wrap) close(openWrap);
+      const p = pop(wrap);
+      const b = btn(wrap);
+      if (!p || !b) return;
+      p.hidden = false;
+      b.setAttribute('aria-expanded', 'true');
+      position(wrap);
+      openWrap = wrap;
+    }
+
+    function close(wrap: HTMLElement) {
+      const p = pop(wrap);
+      const b = btn(wrap);
+      if (!p || !b) return;
+      p.hidden = true;
+      b.setAttribute('aria-expanded', 'false');
+      if (openWrap === wrap) openWrap = null;
+    }
+
+    document.querySelectorAll<HTMLElement>('[data-tooltip]').forEach((wrap) => {
+      const b = btn(wrap);
+      if (!b) return;
+
+      // Hover (wskaźnik) — pokaż/ukryj.
+      wrap.addEventListener('mouseenter', () => open(wrap));
+      wrap.addEventListener('mouseleave', () => {
+        // Nie zamykaj, jeśli fokus pozostaje w środku (klawiatura).
+        if (!wrap.contains(document.activeElement)) close(wrap);
+      });
+
+      // Focus klawiatury.
+      b.addEventListener('focus', () => open(wrap));
+      b.addEventListener('blur', () => {
+        if (!wrap.matches(':hover')) close(wrap);
+      });
+
+      // Klik / dotyk — przełącz.
+      b.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isOpen = b.getAttribute('aria-expanded') === 'true';
+        if (isOpen) close(wrap);
+        else open(wrap);
+      });
+    });
+
+    // Escape — zamknij i wróć fokusem do przycisku.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && openWrap) {
+        const b = btn(openWrap);
+        close(openWrap);
+        b?.focus();
+      }
+    });
+
+    // Klik poza — zamknij.
+    document.addEventListener('click', (e) => {
+      if (openWrap && !openWrap.contains(e.target as Node)) close(openWrap);
+    });
+
+    // Repozycjonuj przy przewijaniu/zmianie rozmiaru.
+    const reposition = () => openWrap && position(openWrap);
+    window.addEventListener('scroll', reposition, true);
+    window.addEventListener('resize', reposition);
+  })();
+</script>

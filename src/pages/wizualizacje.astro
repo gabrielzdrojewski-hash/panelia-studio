@@ -1,0 +1,288 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Gallery from '../components/Gallery.astro';
+import EditorialImage from '../components/EditorialImage.astro';
+import { getVisualizations, getCollections, getByCollection, collectionLabel } from '../lib/media';
+import { editorialMedia, apartmentGroups } from '../data/editorialMedia';
+
+// Obraz okładkowy hero — reprezentacyjne mieszkanie koncepcyjne (nie realizacja).
+const heroCoverId = 'panelia-signature-01-salon-z-aneksem';
+
+const collections = getCollections('visualization');
+const projectTotal = getVisualizations().length;
+
+// Zatwierdzone mieszkania koncepcyjne pogrupowane per pakiet wykończeniowy.
+const apartmentSections = [
+  { label: 'Mieszkania START', pkg: 'panelia_finish_start' },
+  { label: 'Mieszkania COMFORT', pkg: 'panelia_finish_comfort' },
+  { label: 'Mieszkania PREMIUM', pkg: 'panelia_finish_premium' },
+].map((s) => ({ ...s, groups: apartmentGroups(s.pkg) }));
+
+// Inspiracje koncepcyjne — ogólne, fotorealistyczne kadry editorial (bez przypisania do mieszkania
+// i bez grafik schematycznych, które trafiają na /proces).
+const inspirations = editorialMedia.filter(
+  (m) => !m.apartmentId && m.qualityStatus === 'approved' && !m.isSchematic,
+);
+---
+
+<BaseLayout
+  title="Wizualizacje"
+  description="Wizualizacje Panelia Studio — projekty wnętrz, mieszkania koncepcyjne i inspiracje. Materiały jasno oznaczone; nie są zdjęciami wykonanych wnętrz."
+  path="/wizualizacje"
+>
+  <section class="viz-hero">
+    <div class="container viz-hero-inner">
+      <div class="viz-hero-text" data-reveal>
+        <p class="eyebrow">Wizualizacje</p>
+        <h1 class="viz-hero-title">Kompletne wnętrza w koncepcji.</h1>
+        <p class="lead muted viz-hero-lead">
+          Kompletne koncepcje mieszkań pokazane pomieszczenie po pomieszczeniu. To materiały
+          poglądowe i wizualizacje koncepcyjne — nie zdjęcia wykonanych realizacji.
+        </p>
+      </div>
+      <figure class="viz-hero-media" data-reveal style="--reveal-delay: 100ms">
+        <EditorialImage
+          id={heroCoverId}
+          ratio="3/2"
+          loading="eager"
+          fetchpriority="high"
+          sizes="(max-width: 900px) 100vw, 46vw"
+        />
+        <figcaption class="viz-hero-label">Wizualizacja koncepcyjna</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="section-tight">
+    <div class="container">
+      <p class="viz-disclaimer" data-reveal>
+        <strong>Uwaga:</strong> poniższe materiały to <strong>wizualizacje projektowe</strong> oraz
+        <strong>wizualizacje koncepcyjne</strong> (widoki 3D i grafiki koncepcyjne). Przedstawiają
+        koncepcje i projekty — nie są zdjęciami wykonanych wnętrz. Każdy materiał jest odpowiednio
+        oznaczony.
+      </p>
+    </div>
+  </section>
+
+  <!-- PROJEKTY WNĘTRZ (wizualizacje projektowe) -->
+  <section class="section-tight" id="projekty">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Projekty wnętrz</p>
+        <h2>Wizualizacje projektowe</h2>
+      </div>
+    </div>
+    {
+      collections.map((collection) => {
+        const items = getByCollection('visualization', collection);
+        return (
+          <div class="container viz-block">
+            <div class="collection-head" data-reveal>
+              <div>
+                <p class="eyebrow">Projekt</p>
+                <h3>{collectionLabel(collection)}</h3>
+              </div>
+              <span class="collection-count muted">{items.length} wizualizacji</span>
+            </div>
+            <Gallery
+              id={`wizualizacje-${collection}`}
+              items={items}
+              badge="Wizualizacja projektowa"
+              badgeViz={true}
+              columns={3}
+            />
+          </div>
+        );
+      })
+    }
+  </section>
+
+  <!-- MIESZKANIA KONCEPCYJNE (per pakiet) -->
+  <section class="section-tight section-surface" id="mieszkania">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Mieszkania koncepcyjne</p>
+        <h2>Pomieszczenie po pomieszczeniu</h2>
+        <p class="muted head-note">
+          Wizualizacje koncepcyjne całych mieszkań przypisane do pakietów. To materiały poglądowe —
+          nie zdjęcia wykonanych realizacji.
+        </p>
+      </div>
+
+      {
+        apartmentSections
+          .filter((s) => s.groups.length > 0)
+          .map((section) => (
+            <div class="apt-section">
+              <h3 class="apt-section-title" data-reveal>{section.label}</h3>
+              {section.groups.map((group) => (
+                <div class="apartment" data-reveal>
+                  <div class="apartment-head">
+                    <h4 class="apartment-title">{group.title}</h4>
+                    <span class="apartment-style muted">styl: {group.style}</span>
+                  </div>
+                  <div class="apartment-grid">
+                    {group.rooms.map((room) => (
+                      <EditorialImage
+                        id={room.id}
+                        ratio={room.preferredAspectRatio}
+                        showLabel
+                        hoverable
+                        sizes="(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 33vw"
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))
+      }
+    </div>
+  </section>
+
+  <!-- INSPIRACJE KONCEPCYJNE -->
+  <section class="section-tight" id="inspiracje">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Inspiracje koncepcyjne</p>
+        <h2>Kadry inspiracyjne</h2>
+        <p class="muted head-note">
+          Pojedyncze wizualizacje koncepcyjne prezentujące style, materiały i rozwiązania.
+        </p>
+      </div>
+      <div class="inspiration-grid" data-reveal>
+        {
+          inspirations.map((m) => (
+            <EditorialImage
+              id={m.id}
+              ratio={m.preferredAspectRatio}
+              showLabel
+              hoverable
+              sizes="(max-width: 640px) 100vw, (max-width: 1100px) 50vw, 33vw"
+            />
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-dark">
+    <div class="container container-narrow viz-cta" data-reveal>
+      <h2>Zaprojektujmy Twoje wnętrze</h2>
+      <p class="lead">
+        Przygotujemy koncepcję i wizualizacje, dzięki którym zobaczysz efekt, zanim ruszą prace.
+      </p>
+      <a href="/kontakt" class="btn btn-gold">Umów konsultację</a>
+    </div>
+  </section>
+
+  <p class="sr-only">Liczba wizualizacji projektowych: {projectTotal}.</p>
+</BaseLayout>
+
+<style>
+  /* HERO — kompaktowy, 2-kolumnowy, bez pustego dołu */
+  .viz-hero {
+    padding-top: clamp(36px, 4.5vw, 64px);
+    padding-bottom: clamp(28px, 3.5vw, 48px);
+  }
+  .viz-hero-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.06fr);
+    gap: clamp(28px, 4vw, 64px);
+    align-items: center;
+    min-height: clamp(320px, 40vw, 470px);
+  }
+  @media (max-width: 900px) {
+    .viz-hero-inner { grid-template-columns: 1fr; min-height: 0; }
+  }
+  .viz-hero-title {
+    /* RC: 44 → ~84px na 1920, 2–3 linie */
+    font-size: clamp(2.6rem, 5.2vw, 5.25rem);
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    max-width: 14ch;
+  }
+  @media (max-width: 1366px) { .viz-hero-title { font-size: clamp(2.6rem, 5.4vw, 4.75rem); } }
+  @media (max-width: 768px) { .viz-hero-title { font-size: clamp(2.9rem, 7.4vw, 3.6rem); max-width: 18ch; } }
+  @media (max-width: 390px) { .viz-hero-title { font-size: clamp(2.55rem, 12vw, 3rem); } }
+  .viz-hero-lead { margin-top: 1.3rem; max-width: 46ch; }
+  .viz-hero-media { position: relative; margin: 0; }
+  .viz-hero-label {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    padding: 5px 11px;
+    font-size: 0.66rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #fff;
+    background: rgba(20, 16, 11, 0.62);
+    backdrop-filter: blur(4px);
+    border-radius: 999px;
+  }
+
+  .viz-disclaimer {
+    background: color-mix(in srgb, var(--gold) 10%, var(--surface));
+    border: 1px solid var(--gold);
+    border-radius: var(--radius);
+    padding: 1em 1.3em;
+    font-size: 0.95rem;
+    color: var(--accent-deep);
+    margin: 0;
+  }
+  .head-note { margin-top: 1rem; max-width: 62ch; }
+
+  .viz-block { margin-top: clamp(32px, 4vw, 56px); }
+  .collection-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+    margin-bottom: clamp(20px, 2.5vw, 32px);
+    flex-wrap: wrap;
+  }
+  .collection-count {
+    font-size: 0.78rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .apt-section { margin-top: clamp(36px, 5vw, 64px); }
+  .apt-section-title {
+    font-size: clamp(1.1rem, 1.6vw, 1.4rem);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: clamp(20px, 2.5vw, 32px);
+  }
+  .apartment { margin-bottom: clamp(32px, 4vw, 56px); }
+  .apartment-head {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: clamp(14px, 1.8vw, 22px);
+  }
+  .apartment-title { font-size: clamp(1.4rem, 2.2vw, 2rem); }
+  .apartment-style { font-size: 0.85rem; letter-spacing: 0.04em; }
+
+  .apartment-grid,
+  .inspiration-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(14px, 1.8vw, 26px);
+  }
+  @media (max-width: 1100px) { .apartment-grid, .inspiration-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .apartment-grid, .inspiration-grid { grid-template-columns: 1fr; } }
+  .inspiration-grid { margin-top: clamp(24px, 3vw, 40px); }
+
+  .viz-cta {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+  }
+</style>

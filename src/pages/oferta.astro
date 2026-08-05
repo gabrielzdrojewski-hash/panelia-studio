@@ -1,0 +1,82 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import ServiceCard from '../components/ServiceCard.astro';
+import MediaImage from '../components/MediaImage.astro';
+import { services } from '../data/services';
+import { getMediaById } from '../lib/media';
+import { investor } from '../data/content';
+
+// Reprezentacyjna wizualizacja projektowa jako akcent premium (nie realizacja).
+const offerImage = getMediaById('visualization-ustronie-07')!;
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Oferta Panelia Studio',
+  itemListElement: services.map((service, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    name: service.title,
+    description: service.summary,
+  })),
+};
+---
+
+<BaseLayout
+  title="Oferta"
+  description="Pełen zakres usług Panelia Studio: projektowanie wnętrz, układy funkcjonalne, wizualizacje, dobór i dostawa materiałów, dokumentacja, nadzór oraz wykończenie pod klucz."
+  path="/oferta"
+  structuredData={structuredData}
+>
+  <PageHero
+    eyebrow="Oferta"
+    title="Kompleksowe wykończenie wnętrz — od projektu po realizację"
+    lead="Prowadzimy wnętrze na każdym etapie. Możesz powierzyć nam całość albo wybrać zakres, którego naprawdę potrzebujesz."
+  />
+
+  <section class="section-tight">
+    <div class="container">
+      <MediaImage item={offerImage} ratio="16/9" loading="eager" sizes="100vw" />
+      <p class="offer-caption">Wizualizacja projektowa — Ustronie Morskie</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="grid grid-3">
+        {services.map((service, index) => <ServiceCard service={service} index={index} />)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-dark">
+    <div class="container investor-cta">
+      <div data-reveal>
+        <p class="eyebrow">{investor.eyebrow}</p>
+        <h2>{investor.title}</h2>
+      </div>
+      <div data-reveal style="--reveal-delay: 100ms">
+        <p class="lead">{investor.description}</p>
+        <a href="/kontakt" class="btn">Porozmawiajmy o współpracy</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .offer-caption {
+    margin-top: 12px;
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .investor-cta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(28px, 5vw, 72px);
+    align-items: center;
+  }
+  @media (max-width: 820px) { .investor-cta { grid-template-columns: 1fr; } }
+</style>

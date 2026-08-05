@@ -1,0 +1,109 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import MediaImage from '../components/MediaImage.astro';
+import { getMediaById } from '../lib/media';
+import { pillars } from '../data/content';
+
+// Wizualizacja projektowa jako akcent wizualny (nie realizacja).
+const portrait = getMediaById('visualization-ustronie-02')!;
+---
+
+<BaseLayout
+  title="O nas"
+  description="Panelia Studio to studio projektowania i wykończenia wnętrz premium. Łączymy projekt, dobór materiałów i realizację w jeden spójny, przewidywalny proces."
+  path="/o-nas"
+>
+  <PageHero
+    eyebrow="O nas"
+    title="Studio, które prowadzi wnętrze od pomysłu po realizację"
+    lead="Panelia Studio projektuje i wykańcza wnętrza premium. Wierzymy, że dobre wnętrze powstaje wtedy, gdy projekt, materiały i wykonanie są prowadzone razem."
+  />
+
+  <section class="section">
+    <div class="container about-grid">
+      <div class="about-text" data-reveal>
+        <p>
+          Łączymy trzy obszary, które zwykle są rozproszone: projekt, selekcję materiałów i
+          realizację. Dzięki temu odpowiadamy za całość — od pierwszej koncepcji, przez
+          wizualizacje, po gotowe wnętrze.
+        </p>
+        <p>
+          Dobieramy materiały premium i dostarczamy je prosto od producentów. Utrzymujemy spójność
+          estetyki i jakości, a logistykę bierzemy na siebie. Ty podejmujesz decyzje na podstawie
+          wizualizacji — świadomie, bez niespodzianek.
+        </p>
+        <p>
+          Pracujemy dla osób urządzających własne mieszkania oraz dla inwestorów, którzy potrzebują
+          powtarzalnego, przewidywalnego standardu na wielu lokalach.
+        </p>
+      </div>
+      <figure class="about-media" data-reveal style="--reveal-delay: 100ms">
+        <MediaImage item={portrait} ratio="3/4" sizes="(max-width: 820px) 100vw, 40vw" />
+        <figcaption class="about-caption">Wizualizacja projektowa</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="section section-surface">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Jak pracujemy</p>
+        <h2>Co nas wyróżnia</h2>
+      </div>
+      <div class="grid grid-2 about-pillars">
+        {
+          pillars.map((pillar, index) => (
+            <div class="about-pillar" data-reveal style={`--reveal-delay: ${(index % 2) * 90}ms`}>
+              <h3>{pillar.title}</h3>
+              <p class="muted">{pillar.description}</p>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-dark">
+    <div class="container container-narrow about-cta" data-reveal>
+      <h2>Zbudujmy Twoje wnętrze razem</h2>
+      <p class="lead">
+        Opowiedz nam o swoim projekcie. Podpowiemy, jak możemy go poprowadzić — w całości lub w
+        wybranym zakresie.
+      </p>
+      <a href="/kontakt" class="btn">Umów konsultację</a>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 0.9fr;
+    gap: clamp(28px, 5vw, 72px);
+    align-items: start;
+  }
+  @media (max-width: 820px) { .about-grid { grid-template-columns: 1fr; } }
+  .about-text p { font-size: clamp(1.05rem, 1.5vw, 1.2rem); line-height: 1.7; }
+  .about-media { position: sticky; top: 100px; margin: 0; }
+  .about-caption {
+    margin-top: 12px;
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  @media (max-width: 820px) { .about-media { position: static; } }
+
+  .about-pillar h3 { margin-bottom: 0.6rem; }
+  .about-pillars { gap: clamp(24px, 3vw, 48px); }
+
+  .about-cta {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+  }
+  .about-cta .lead { max-width: 52ch; }
+</style>

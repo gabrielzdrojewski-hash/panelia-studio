@@ -1,0 +1,78 @@
+---
+// Uczciwe zestawienie: wizualizacja projektu ↔ zrealizowane wnętrze (ten sam projekt).
+// WARIANT B — dwa duże kadry obok siebie. Nie udajemy identycznego „przed/po":
+// kadry pochodzą z tej samej inwestycji, ale mogą różnić się kątem i proporcją.
+// Bez ciężkich bibliotek, dostępne, semantyczne.
+import MediaImage from './MediaImage.astro';
+import { getMediaById } from '../lib/media';
+
+interface Props {
+  vizId: string;
+  realizationId: string;
+  vizLabel?: string;
+  realizationLabel?: string;
+  caption?: string;
+}
+const {
+  vizId,
+  realizationId,
+  vizLabel = 'Wizualizacja projektu',
+  realizationLabel = 'Zrealizowane wnętrze',
+  caption = 'Ten sam projekt — dwa etapy procesu. Kadry pokazują tę samą inwestycję, ale nie muszą mieć identycznego kąta.',
+} = Astro.props;
+
+const viz = getMediaById(vizId);
+const real = getMediaById(realizationId);
+---
+
+{
+  viz && real && (
+    <figure class="pvr" data-reveal>
+      <div class="pvr-pair">
+        <div class="pvr-item">
+          <span class="pvr-tag pvr-tag--viz">{vizLabel}</span>
+          <MediaImage item={viz} ratio="4/3" sizes="(max-width: 780px) 100vw, 50vw" hoverable />
+        </div>
+        <div class="pvr-item">
+          <span class="pvr-tag pvr-tag--real">{realizationLabel}</span>
+          <MediaImage item={real} ratio="4/3" sizes="(max-width: 780px) 100vw, 50vw" hoverable />
+        </div>
+      </div>
+      <figcaption class="pvr-caption muted">{caption}</figcaption>
+    </figure>
+  )
+}
+
+<style>
+  .pvr { margin: 0; }
+  .pvr-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(12px, 1.6vw, 22px);
+  }
+  @media (max-width: 780px) { .pvr-pair { grid-template-columns: 1fr; } }
+
+  .pvr-item { position: relative; }
+  .pvr-tag {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 2;
+    padding: 6px 12px;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #fff;
+    border-radius: 999px;
+    backdrop-filter: blur(4px);
+  }
+  .pvr-tag--viz { background: rgba(20, 16, 11, 0.6); }
+  .pvr-tag--real { background: color-mix(in srgb, var(--accent-deep) 88%, #000); }
+
+  .pvr-caption {
+    margin-top: clamp(12px, 1.5vw, 18px);
+    font-size: 0.9rem;
+    max-width: 70ch;
+  }
+</style>

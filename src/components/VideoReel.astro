@@ -1,0 +1,163 @@
+---
+// Pełnoekranowa rolka wideo (cinematic reel).
+//
+// STAN OBECNY: `enabled = false`. Na żywej stronie paneliastudio.pl nie znaleziono pliku wideo
+// możliwego do bezpiecznego, legalnego ponownego użycia, dlatego NIE pokazujemy niedziałającego
+// odtwarzacza — wyświetlamy reprezentacyjny poster (wizualizację) jako pełnoekranowy kadr.
+//
+// ABY WŁĄCZYĆ WIDEO (gdy pojawi się materiał należący do Panelia Studio):
+//   1. Zapisz pliki lokalnie (nie hotlinkuj):
+//        public/media/video/panelia-reel.mp4
+//        public/media/video/panelia-reel.webm   (opcjonalnie)
+//   2. Ustaw `enabled={true}` w miejscu użycia komponentu (src/pages/index.astro).
+//   3. Poster pozostaje jako `poster` (obraz z manifestu mediów).
+// Autoplay jest automatycznie wyłączany przy prefers-reduced-motion.
+
+import { getMediaById } from '../lib/media';
+
+interface Props {
+  enabled?: boolean;
+  posterId?: string; // id materiału z media.json użytego jako poster.
+  mp4?: string;
+  webm?: string;
+  eyebrow?: string;
+  title?: string;
+  subtitle?: string;
+}
+
+const {
+  enabled = false,
+  posterId = 'visualization-ustronie-04',
+  mp4 = '/media/video/panelia-reel.mp4',
+  webm = '/media/video/panelia-reel.webm',
+  eyebrow = 'Panelia Studio',
+  title = 'Wnętrza, które chce się oglądać',
+  subtitle = 'Od koncepcji i wizualizacji po dobór materiałów, koordynację i realizację.',
+} = Astro.props;
+
+const poster = getMediaById(posterId)!;
+---
+
+<section class:list={['reel', { 'reel-static': !enabled }]} data-reel={enabled ? '' : undefined}>
+  <div class="reel-media">
+    {
+      enabled ? (
+        <video
+          class="reel-video"
+          poster={poster.path}
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          data-reel-video
+        >
+          <source src={webm} type="video/webm" />
+          <source src={mp4} type="video/mp4" />
+        </video>
+      ) : (
+        <img
+          src={poster.path}
+          alt={poster.alt}
+          width={poster.width}
+          height={poster.height}
+          loading="lazy"
+          decoding="async"
+        />
+      )
+    }
+    <span class="reel-overlay" aria-hidden="true"></span>
+  </div>
+
+  <div class="container reel-content">
+    <p class="eyebrow" data-reveal>{eyebrow}</p>
+    <h2 class="reel-title" data-reveal style="--reveal-delay: 80ms">{title}</h2>
+    <p class="reel-subtitle" data-reveal style="--reveal-delay: 150ms">{subtitle}</p>
+  </div>
+
+  {
+    enabled && (
+      <button type="button" class="reel-toggle" data-reel-toggle aria-label="Wstrzymaj wideo">
+        <svg class="reel-icon reel-icon-pause" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+          <rect x="6" y="5" width="4" height="14" rx="1" />
+          <rect x="14" y="5" width="4" height="14" rx="1" />
+        </svg>
+        <svg class="reel-icon reel-icon-play" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </button>
+    )
+  }
+</section>
+
+<style>
+  .reel {
+    position: relative;
+    min-height: min(90svh, 780px);
+    display: flex;
+    align-items: flex-end;
+    padding-block: clamp(48px, 8vw, 120px);
+    color: var(--on-dark);
+    overflow: hidden;
+    background: var(--dark);
+  }
+  .reel-media { position: absolute; inset: 0; z-index: 0; }
+  .reel-media img, .reel-video { width: 100%; height: 100%; object-fit: cover; }
+  .reel-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(15, 13, 9, 0.35) 0%, rgba(15, 13, 9, 0.2) 45%, rgba(15, 13, 9, 0.72) 100%);
+  }
+  .reel-content { position: relative; z-index: 1; }
+  .reel-title { color: #fff; max-width: 18ch; }
+  .reel-subtitle {
+    margin-top: 1.4rem;
+    max-width: 46ch;
+    font-size: clamp(1.1rem, 1.4vw, 1.35rem);
+    color: rgba(243, 239, 230, 0.9);
+  }
+
+  .reel-toggle {
+    position: absolute;
+    right: clamp(20px, 4vw, 56px);
+    bottom: clamp(20px, 4vw, 56px);
+    z-index: 2;
+    width: 56px; height: 56px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px;
+    border: 1.5px solid rgba(243, 239, 230, 0.4);
+    background: rgba(20, 16, 11, 0.35);
+    backdrop-filter: blur(6px);
+    color: var(--on-dark);
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+  }
+  .reel-toggle:hover { background: rgba(20, 16, 11, 0.6); border-color: var(--gold); }
+  .reel-icon-play { display: none; }
+  .reel-toggle[data-paused] .reel-icon-play { display: block; }
+  .reel-toggle[data-paused] .reel-icon-pause { display: none; }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-reel]').forEach((reel) => {
+    const video = reel.querySelector<HTMLVideoElement>('[data-reel-video]');
+    const toggle = reel.querySelector<HTMLButtonElement>('[data-reel-toggle]');
+    if (!video || !toggle) return;
+
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const setUI = (playing: boolean) => {
+      toggle.setAttribute('aria-label', playing ? 'Wstrzymaj wideo' : 'Odtwórz wideo');
+      toggle.toggleAttribute('data-paused', !playing);
+    };
+
+    if (!prefersReduced) {
+      video.play().then(() => setUI(true)).catch(() => setUI(false));
+    } else {
+      setUI(false);
+    }
+
+    toggle.addEventListener('click', () => {
+      if (video.paused) video.play().then(() => setUI(true)).catch(() => {});
+      else { video.pause(); setUI(false); }
+    });
+  });
+</script>

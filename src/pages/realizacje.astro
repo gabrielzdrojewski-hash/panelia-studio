@@ -1,0 +1,70 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import { projects } from '../data/projects';
+import { getMediaById } from '../lib/media';
+import { mediaNotes } from '../data/content';
+
+const cover = getMediaById(projects[0]?.coverId ?? '');
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  name: 'Realizacje Panelia Studio',
+  description: mediaNotes.realizations,
+};
+---
+
+<BaseLayout
+  title="Realizacje"
+  description="Katalog realizacji Panelia Studio — prawdziwe, wykonane wnętrza. Wybierz projekt, aby zobaczyć zdjęcia z realizacji i wizualizacje projektowe."
+  path="/realizacje"
+  image={cover?.path}
+  structuredData={structuredData}
+>
+  <PageHero
+    eyebrow="Realizacje"
+    title="Wykonane wnętrza — katalog projektów"
+    lead={mediaNotes.realizations}
+  />
+
+  <section class="catalog-section">
+    <div class="container">
+      <div class="catalog">
+        {projects.map((project, index) => <ProjectCard project={project} index={index} />)}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-dark">
+    <div class="container container-narrow realizations-cta" data-reveal>
+      <p class="eyebrow">Twój projekt</p>
+      <h2>Chcesz podobny efekt u siebie?</h2>
+      <p class="lead">
+        Pokażemy, jak możemy poprowadzić Twój projekt — od koncepcji i wizualizacji po gotowe
+        wnętrze.
+      </p>
+      <a href="/kontakt" class="btn">Umów konsultację</a>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* Katalog blisko nagłówka — bez dużej pustej przestrzeni pod hero. */
+  .catalog-section {
+    padding-block: clamp(20px, 3vw, 44px) clamp(72px, 10vw, 140px);
+  }
+  .catalog {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(56px, 9vw, 120px);
+  }
+  .realizations-cta {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+  }
+</style>

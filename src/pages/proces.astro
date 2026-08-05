@@ -1,0 +1,164 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import ProcessTimeline from '../components/ProcessTimeline.astro';
+import EditorialImage from '../components/EditorialImage.astro';
+import ProjectVsRealization from '../components/ProjectVsRealization.astro';
+import { getEditorial } from '../data/editorialMedia';
+import { processSteps } from '../data/process';
+
+// Kadry schematyczne ilustrujące wczesne etapy procesu (grafiki koncepcyjne / schematy, nie realizacje).
+const stageVisuals = [
+  { id: '02-panelia-projekt-funkcjonalny-01', label: 'Schemat koncepcji i układu' },
+  { id: '06-panelia-dobor-materialow-01', label: 'Dobór materiałów' },
+  { id: '05-panelia-dokumentacja-wykonawcza-01', label: 'Schemat dokumentacji wykonawczej' },
+]
+  .map((s) => ({ ...s, media: getEditorial(s.id) }))
+  .filter((s) => s.media);
+---
+
+<BaseLayout
+  title="Proces"
+  description="Jak przebiega współpraca z Panelia Studio — od pierwszej rozmowy, przez koncepcję, wizualizacje i dobór materiałów, po realizację i odbiór wnętrza."
+  path="/proces"
+>
+  <PageHero
+    eyebrow="Proces"
+    title="Uporządkowany proces od pierwszej rozmowy po odbiór"
+    lead="Każdy etap ma jasny cel. Wiesz, co dzieje się na kolejnych krokach i czego się spodziewać."
+  />
+
+  <section class="section">
+    <div class="container">
+      <ProcessTimeline steps={processSteps} />
+    </div>
+  </section>
+
+  <section class="section-tight section-surface">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Etapy w obrazach</p>
+        <h2>Co powstaje na wczesnych etapach</h2>
+        <p class="muted stage-note">
+          Schematy i grafiki koncepcyjne ilustrujące charakter pracy na etapie projektu —
+          nie są zdjęciami wykonanych wnętrz ani dokumentacją konkretnego klienta.
+        </p>
+      </div>
+      <ol class="stage-grid" data-reveal>
+        {
+          stageVisuals.map((s) => (
+            <li class="stage-card">
+              <EditorialImage
+                id={s.id}
+                ratio="16/9"
+                showLabel={false}
+                hoverable
+                sizes="(max-width: 640px) 100vw, (max-width: 1000px) 50vw, 33vw"
+              />
+              <span class="stage-card-label">{s.label}</span>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- PROJEKT → EFEKT (ta sama inwestycja: Ustronie Morskie) -->
+  <section class="section-tight">
+    <div class="container">
+      <div class="section-head wide" data-reveal>
+        <p class="eyebrow">Projekt → efekt</p>
+        <h2>Od wizualizacji do gotowego wnętrza.</h2>
+        <p class="muted stage-note">
+          Wizualizacja porządkuje decyzje przed rozpoczęciem prac. Realizacja pokazuje, jak projekt,
+          materiały i wykonanie spotykają się w gotowej przestrzeni.
+        </p>
+      </div>
+      <ProjectVsRealization vizId="visualization-ustronie-06" realizationId="realization-ustronie-05" />
+    </div>
+  </section>
+
+  <section class="section-tight section-surface">
+    <div class="container container-narrow">
+      <div class="two-contracts" data-reveal>
+        <p class="eyebrow">Projekt i realizacja</p>
+        <h2 class="two-contracts-title">Jeden proces, dwie umowy.</h2>
+        <p class="lead muted">
+          Projekt i realizacja tworzą jeden skoordynowany proces Panelia Studio, ale są objęte
+          odrębnymi umowami. Umowa projektowa zawierana jest z działalnością projektową, a umowa
+          wykonawcza ze spółką realizacyjną.
+        </p>
+        <ul class="two-contracts-steps muted">
+          <li>Najpierw ustalany jest zakres projektu.</li>
+          <li>Po zatwierdzeniu projektu i zakresu prac powstaje oferta wykonawcza.</li>
+          <li>Zakres odpowiedzialności każdego podmiotu wynika z właściwej umowy.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-surface">
+    <div class="container container-narrow process-cta" data-reveal>
+      <p class="eyebrow">Następny krok</p>
+      <h2>Zacznijmy od rozmowy</h2>
+      <p class="lead muted">
+        Pierwsza rozmowa jest niezobowiązująca. Poznamy Twoje wnętrze i oczekiwania, a potem
+        zaproponujemy dalsze kroki.
+      </p>
+      <a href="/kontakt" class="btn">Umów konsultację</a>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .process-cta {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+  }
+  .process-cta .lead { max-width: 54ch; }
+  .two-contracts {
+    border-left: 2px solid var(--gold);
+    padding-left: clamp(20px, 3vw, 32px);
+  }
+  .two-contracts-title { font-size: clamp(1.8rem, 3vw, 2.6rem); margin-bottom: 1rem; }
+  .two-contracts .lead { max-width: 66ch; }
+  .two-contracts-steps {
+    margin: 1.4rem 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 10px;
+    max-width: 66ch;
+    font-size: 0.98rem;
+  }
+  .two-contracts-steps li { position: relative; padding-left: 22px; }
+  .two-contracts-steps li::before {
+    content: '';
+    position: absolute; left: 0; top: 0.55em;
+    width: 7px; height: 7px; background: var(--gold); transform: rotate(45deg);
+  }
+
+  .stage-note { margin-top: 1rem; max-width: 60ch; }
+  .stage-grid {
+    list-style: none;
+    margin: clamp(24px, 3vw, 40px) 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(14px, 1.8vw, 26px);
+  }
+  @media (max-width: 1000px) { .stage-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .stage-grid { grid-template-columns: 1fr; } }
+  .stage-card { margin: 0; }
+  .stage-card-label {
+    display: block;
+    margin-top: 10px;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+  }
+</style>

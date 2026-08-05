@@ -8,3 +8,4 @@ dist/
 desktop.ini
 Thumbs.db
 *.log
+.claude/

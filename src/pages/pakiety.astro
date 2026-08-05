@@ -1,0 +1,617 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ComparisonTable from '../components/ComparisonTable.astro';
+import PackageBand from '../components/PackageBand.astro';
+import EditorialImage from '../components/EditorialImage.astro';
+import { packages, designComparison, finishComparison } from '../data/packages';
+import { designBands, finishBands } from '../data/packageBands';
+import {
+  materialProfiles,
+  materialModules,
+  materialTableShort,
+  materialLead,
+  materialDisclaimer,
+  confirmNote,
+} from '../data/materialStandards';
+import { getEditorial } from '../data/editorialMedia';
+
+// Obraz OG: grafika redakcyjna (wizualizacja koncepcyjna) — nie realizacja.
+const ogImage = getEditorial('panelia-cathedral-living-01')!.src;
+
+// Skrótowe „Pełne porównanie” standardu materiałowego (zwijane).
+const materialSet = {
+  columns: ['START', 'COMFORT', 'PREMIUM'],
+  rows: materialTableShort.map((row) => ({
+    feature: row.group,
+    values: [row.start, row.comfort, row.premium],
+  })),
+};
+
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Pakiety Panelia Studio',
+  itemListElement: packages.map((pkg, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    name: pkg.name,
+    description: pkg.intro,
+  })),
+};
+---
+
+<BaseLayout
+  title="Pakiety"
+  description="Pakiety Panelia Studio — projektowe (Concept, Complete, Signature) oraz projektowo-wykończeniowe (Start, Comfort, Premium). Zakres, standard materiałowy i porównanie — bez cen."
+  path="/pakiety"
+  image={ogImage}
+  structuredData={structuredData}
+>
+  <!-- HERO -->
+  <section class="pk-hero">
+    <div class="container">
+      <p class="eyebrow" data-reveal>Pakiety</p>
+      <h1 class="pk-hero-title" data-reveal>Dwie ścieżki,<br class="pk-br" /> sześć pakietów.</h1>
+      <p class="lead muted pk-hero-lead" data-reveal>
+        Wybierz sam projekt wnętrza albo projekt połączony z wykończeniem. Bez cen na stronie —
+        wyceny ustalamy indywidualnie.
+      </p>
+    </div>
+  </section>
+
+  <section class="section-tight pk-open">
+    <div class="container">
+      <EditorialImage
+        id="panelia-warm-living-dining-01"
+        ratio="21/9"
+        loading="eager"
+        fetchpriority="high"
+        showLabel
+        sizes="100vw"
+      />
+    </div>
+  </section>
+
+  <!-- KOTWICZNA NAWIGACJA -->
+  <nav class="anchor-nav" aria-label="Sekcje pakietów">
+    <div class="container anchor-nav-inner">
+      <a href="#projektowe">Pakiety projektowe</a>
+      <a href="#wykonczeniowe">Pakiety wykończeniowe</a>
+      <a href="#standard-materialowy">Standard materiałowy</a>
+    </div>
+  </nav>
+
+  <!-- PAKIETY PROJEKTOWE -->
+  <section class="section pk-section" id="projektowe">
+    <div class="container">
+      <div class="section-head wide" data-reveal>
+        <p class="eyebrow">Ścieżka 1 · Projekt wnętrza</p>
+        <h2>Projekt wnętrza</h2>
+        <p class="lead muted">
+          Trzy poziomy projektu — od spójnej koncepcji po kompletną dokumentację i wsparcie przy
+          zamówieniach.
+        </p>
+      </div>
+
+      <div class="bands">
+        {designBands.map((band) => <PackageBand band={band} />)}
+      </div>
+
+      <details class="full-cmp">
+        <summary class="full-cmp-summary">
+          <span>Porównaj szczegółowo pakiety projektowe</span>
+          <span class="full-cmp-icon" aria-hidden="true" />
+        </summary>
+        <div class="full-cmp-body">
+          <ComparisonTable
+            set={designComparison}
+            caption="Szczegółowe porównanie pakietów projektowych Panelia Studio"
+            idPrefix="cmp-design"
+            highlightLast
+          />
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- PAKIETY WYKOŃCZENIOWE -->
+  <section class="section section-surface pk-section" id="wykonczeniowe">
+    <div class="container">
+      <div class="section-head wide" data-reveal>
+        <p class="eyebrow">Ścieżka 2 · Projekt i wykończenie</p>
+        <h2>Projekt i wykończenie</h2>
+        <p class="lead muted">
+          Projekt połączony z realizacją — od prostego, uporządkowanego standardu po najwyższy
+          poziom detali i koordynacji.
+        </p>
+      </div>
+
+      <div class="bands">
+        {finishBands.map((band) => <PackageBand band={band} />)}
+      </div>
+
+      <p class="limits-note muted" data-reveal>
+        Dokładne ilości, limity oraz ewentualne elementy dodatkowe są wskazywane w indywidualnej
+        ofercie przygotowanej na podstawie powierzchni, projektu i wybranego standardu.
+      </p>
+
+      <details class="full-cmp">
+        <summary class="full-cmp-summary">
+          <span>Porównaj szczegółowo pakiety wykończeniowe</span>
+          <span class="full-cmp-icon" aria-hidden="true" />
+        </summary>
+        <div class="full-cmp-body">
+          <ComparisonTable
+            set={finishComparison}
+            caption="Szczegółowe porównanie pakietów wykończeniowych Panelia Studio"
+            idPrefix="cmp-finish"
+            highlightLast
+          />
+
+          <details class="cmp-legend">
+            <summary>Jak czytać porównanie?</summary>
+            <ul class="cmp-legend-list">
+              <li><strong>Zawarte</strong> (✓) — element wchodzi w zakres pakietu.</li>
+              <li><strong>Dostępne w zakresie oferty</strong> — realizowane w ilościach i zakresie ustalonych indywidualnie.</li>
+              <li><strong>Opcjonalne</strong> — możliwe do dodania po uzgodnieniu.</li>
+              <li><strong>Kalkulowane osobno</strong> — wyceniane poza standardem pakietu.</li>
+              <li><strong>Niedostępne w standardzie</strong> (—) — poza zakresem danego pakietu.</li>
+            </ul>
+            <p class="muted cmp-legend-hint">
+              Ikona <span class="cmp-legend-i" aria-hidden="true">i</span> przy pozycji otwiera krótkie
+              objaśnienie pojęcia.
+            </p>
+          </details>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- STANDARD MATERIAŁOWY -->
+  <section class="section pk-section" id="standard-materialowy">
+    <div class="container">
+      <div class="section-head wide" data-reveal>
+        <p class="eyebrow">Materiały</p>
+        <h2>Standard materiałowy</h2>
+        <p class="lead muted">{materialLead}</p>
+      </div>
+
+      <!-- A. PROFILE MATERIAŁOWE -->
+      <div class="profiles">
+        {
+          materialProfiles.map((profile) => (
+            <article
+              class:list={['profile', `profile-${profile.key}`]}
+              id={`materialy-${profile.key}`}
+              data-reveal
+            >
+              <div class="profile-main">
+                <div class="profile-top">
+                  <span class="profile-num">{profile.number}</span>
+                  {profile.label && <span class="profile-label">{profile.label}</span>}
+                </div>
+                <span class="profile-short">{profile.short}</span>
+                <h3 class="profile-heading">{profile.heading}</h3>
+                <p class="profile-intro">{profile.intro}</p>
+
+                <ul class="profile-points">
+                  {profile.points.map((point) => <li>{point}</li>)}
+                </ul>
+
+                {(profile.key === 'comfort' || profile.key === 'premium') && (
+                  <p class="profile-confirm">{confirmNote}</p>
+                )}
+
+                <div class="profile-cta">
+                  {profile.key === 'premium' && (
+                    <a href="/kontakt?pakiet=panelia_finish_premium" class="btn btn-gold">
+                      Zapytaj o dostępne kolekcje
+                    </a>
+                  )}
+                  <a href={`/kontakt?pakiet=${profile.formValue}`} class="btn btn-ghost">
+                    Zapytaj o pakiet {profile.short}
+                  </a>
+                </div>
+              </div>
+
+              {profile.key === 'comfort' && (
+                <figure class="profile-media">
+                  <EditorialImage
+                    id="panelia-open-house-living-01"
+                    ratio="4/3"
+                    hoverable
+                    showLabel
+                    sizes="(max-width: 860px) 100vw, 34vw"
+                  />
+                </figure>
+              )}
+            </article>
+          ))
+        }
+      </div>
+
+      <!-- B. TEMATYCZNE MODUŁY PORÓWNAWCZE -->
+      <div class="modules">
+        <p class="eyebrow modules-eyebrow" data-reveal>Porównanie tematyczne</p>
+        {
+          materialModules.map((module) => (
+            <div class="module" data-reveal>
+              <div class="module-head">
+                <span class="module-num">{module.number}</span>
+                <div>
+                  <h3 class="module-title">{module.title}</h3>
+                  <p class="module-intro muted">{module.intro}</p>
+                </div>
+              </div>
+              {module.imageId && (
+                <figure class="module-media">
+                  <EditorialImage
+                    id={module.imageId}
+                    ratio="21/9"
+                    hoverable
+                    showLabel
+                    sizes="(max-width: 900px) 100vw, 66vw"
+                  />
+                </figure>
+              )}
+              <div class="module-grid">
+                <div class="module-col">
+                  <span class="module-lvl">START</span>
+                  <ul>{module.start.map((item) => <li>{item}</li>)}</ul>
+                </div>
+                <div class="module-col">
+                  <span class="module-lvl">COMFORT</span>
+                  <ul>{module.comfort.map((item) => <li>{item}</li>)}</ul>
+                </div>
+                <div class="module-col module-col-premium">
+                  <span class="module-lvl">PREMIUM</span>
+                  <ul>{module.premium.map((item) => <li>{item}</li>)}</ul>
+                </div>
+              </div>
+              {module.note && <p class="module-note muted">{module.note}</p>}
+            </div>
+          ))
+        }
+      </div>
+
+      <!-- C. PEŁNE PORÓWNANIE STANDARDU (zwijane) -->
+      <details class="full-cmp" id="pelne-porownanie">
+        <summary class="full-cmp-summary">
+          <span>Pokaż pełne porównanie standardu materiałowego</span>
+          <span class="full-cmp-icon" aria-hidden="true" />
+        </summary>
+        <div class="full-cmp-body">
+          <ComparisonTable
+            set={materialSet}
+            caption="Pełne porównanie standardu materiałowego Panelia Studio"
+            firstCol="Grupa"
+            idPrefix="cmp-material"
+            highlightLast
+          />
+        </div>
+      </details>
+
+      <p class="material-disclaimer muted" data-reveal>{materialDisclaimer}</p>
+
+      <div class="material-cta" data-reveal>
+        <a href="/kontakt?pakiet=panelia_finish_premium" class="btn btn-gold">Poznaj dostępne kolekcje</a>
+        <a href="/kontakt" class="btn btn-ghost">Umów konsultację materiałową</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section section-dark">
+    <div class="container final-cta-inner" data-reveal>
+      <div>
+        <p class="eyebrow">Wycena indywidualna</p>
+        <h2>Dobierzemy zakres<br />do Twojego wnętrza</h2>
+      </div>
+      <div class="final-cta-side">
+        <p class="lead">
+          Ceny ustalamy indywidualnie na podstawie zakresu. Umów konsultację lub zapytaj o wycenę —
+          podpowiemy, który pakiet najlepiej odpowiada Twoim potrzebom.
+        </p>
+        <div class="final-cta-actions">
+          <a href="/kontakt" class="btn btn-gold">Zapytaj o indywidualną wycenę</a>
+          <a href="/proces" class="btn btn-ghost">Zobacz proces</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  /* ===== Lokalna skala typografii /pakiety ===== */
+  .pk-hero {
+    padding-top: clamp(52px, 7vw, 112px);
+    padding-bottom: clamp(20px, 3vw, 40px);
+  }
+  .pk-hero-title {
+    font-size: clamp(2.6rem, 6vw, 6.4rem); /* ~42 → ~102px */
+    line-height: 0.92;
+    letter-spacing: -0.04em;
+    max-width: min(100%, 56rem);
+    text-wrap: balance;
+  }
+  @media (max-width: 820px) {
+    .pk-hero-title { font-size: clamp(2.75rem, 8.5vw, 4.25rem); line-height: 0.94; }
+  }
+  @media (max-width: 560px) { .pk-br { display: none; } }
+  .pk-hero-lead {
+    margin-top: clamp(24px, 3vw, 40px);
+    max-width: 34rem; /* ~480–620px */
+    font-size: clamp(1.05rem, 1.3vw, 1.25rem);
+    line-height: 1.55;
+  }
+
+  .banner-caption {
+    margin-top: 12px;
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+  }
+
+  /* Offset kotwic + zredukowana skala sekcji /pakiety */
+  .pk-section {
+    scroll-margin-top: 140px;
+    padding-block: clamp(60px, 8.5vw, 140px);
+  }
+  .pk-section .section-head { margin-bottom: clamp(28px, 3.5vw, 48px); }
+  .pk-section h2 { font-size: clamp(2.4rem, 4.6vw, 4.5rem); } /* ~68–72px */
+  .pk-open { padding-block: clamp(28px, 4vw, 56px); }
+  .limits-note { margin-top: clamp(20px, 2.5vw, 32px); max-width: 78ch; font-size: 0.9rem; }
+  .module-media { margin: 0 0 clamp(20px, 2.5vw, 32px); }
+
+  .anchor-nav {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 40;
+    background: color-mix(in srgb, var(--paper) 94%, transparent);
+    backdrop-filter: saturate(1.1) blur(10px);
+    border-block: 1px solid var(--line);
+  }
+  .anchor-nav-inner {
+    display: flex;
+    gap: clamp(16px, 3vw, 44px);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .anchor-nav-inner::-webkit-scrollbar { display: none; }
+  .anchor-nav a {
+    padding: 18px 0;
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .anchor-nav a:hover { color: var(--ink); border-bottom-color: var(--gold); }
+
+  /* Pasy pakietów */
+  .bands {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(20px, 2.6vw, 36px);
+    margin-top: clamp(4px, 1.5vw, 16px);
+  }
+
+  /* ===== Standard materiałowy ===== */
+  .material-disclaimer { margin-top: clamp(28px, 4vw, 44px); max-width: 92ch; font-size: 0.9rem; }
+  .material-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: clamp(36px, 5vw, 56px); }
+
+  /* A. Profile materiałowe */
+  .profiles {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(24px, 3vw, 40px);
+    margin-top: clamp(8px, 2vw, 24px);
+  }
+  .profile { border-radius: var(--radius-lg); scroll-margin-top: 150px; transition: box-shadow 0.4s ease; }
+  .profile:target { box-shadow: 0 0 0 2px var(--gold); }
+
+  .profile-top { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 0.9rem; }
+  .profile-num {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(2.8rem, 6vw, 5.2rem);
+    line-height: 0.8;
+    letter-spacing: -0.05em;
+    color: var(--gold);
+  }
+  .profile-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--accent-deep);
+    padding: 0.5em 0.95em;
+    border: 1px solid var(--gold);
+    border-radius: 999px;
+  }
+  .profile-short {
+    display: block;
+    font-size: 0.75rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--accent-deep);
+    margin-bottom: 0.5rem;
+  }
+  .profile-heading { font-size: clamp(1.6rem, 2.6vw, 2.4rem); }
+  .profile-intro { font-size: 1.05rem; color: var(--muted); margin: 1rem 0 0; max-width: 52ch; }
+  .profile-points {
+    list-style: none;
+    margin: clamp(20px, 2.5vw, 32px) 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 32px;
+  }
+  @media (max-width: 560px) { .profile-points { grid-template-columns: 1fr; } }
+  .profile-points li { position: relative; padding-left: 24px; font-size: 0.98rem; line-height: 1.5; }
+  .profile-points li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.5em;
+    width: 8px;
+    height: 8px;
+    background: var(--gold);
+    transform: rotate(45deg);
+  }
+  .profile-confirm { margin: clamp(20px, 2.5vw, 28px) 0 0; font-size: 0.9rem; color: var(--muted); max-width: 62ch; }
+  .profile-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-top: clamp(24px, 3vw, 36px); }
+
+  .profile-start { background: var(--surface); border: 1px solid var(--line); padding: clamp(28px, 3.5vw, 52px); }
+
+  .profile-comfort {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    padding: clamp(28px, 3.5vw, 52px);
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: clamp(28px, 4vw, 64px);
+    align-items: center;
+  }
+  .profile-comfort .profile-media { margin: 0; }
+  .profile-comfort .media-cap {
+    margin-top: 10px;
+    font-size: 0.7rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent-deep);
+  }
+  @media (max-width: 860px) { .profile-comfort { grid-template-columns: 1fr; } }
+
+  .profile-premium { background: var(--dark); color: var(--on-dark); padding: clamp(32px, 4vw, 60px); }
+  .profile-premium .profile-heading { color: #fff; }
+  .profile-premium .profile-intro { color: var(--on-dark-muted); }
+  .profile-premium .profile-short { color: var(--on-dark-gold); }
+  .profile-premium .profile-points li { color: var(--on-dark); }
+  .profile-premium .profile-confirm { color: var(--on-dark-muted); }
+  .profile-premium .profile-label { color: var(--on-dark-gold); border-color: var(--gold); }
+  .profile-premium .btn-ghost { color: var(--on-dark); border-color: rgba(243, 239, 230, 0.35); }
+  .profile-premium .btn-ghost:hover { background: var(--on-dark); color: var(--dark); border-color: var(--on-dark); }
+
+  /* B. Moduły tematyczne */
+  .modules { margin-top: clamp(44px, 6.5vw, 92px); }
+  .modules-eyebrow { display: block; margin-bottom: clamp(20px, 2.6vw, 34px); }
+  .module { border-top: 1px solid var(--line-strong); padding-block: clamp(28px, 3.4vw, 48px); }
+  .module-head { display: flex; gap: 20px; align-items: baseline; margin-bottom: clamp(20px, 2.5vw, 32px); }
+  .module-num {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(1.4rem, 2.2vw, 2rem);
+    color: var(--gold);
+    line-height: 1;
+  }
+  .module-title { font-size: clamp(1.4rem, 2.2vw, 2rem); }
+  .module-intro { margin: 6px 0 0; font-size: 0.95rem; }
+  .module-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(20px, 2.5vw, 44px); }
+  @media (max-width: 760px) { .module-grid { grid-template-columns: 1fr; gap: 20px; } }
+  .module-col { border-left: 1px solid var(--line); padding-left: clamp(16px, 1.5vw, 24px); }
+  .module-col-premium { border-left-color: var(--gold); }
+  @media (max-width: 760px) {
+    .module-col { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 16px; }
+    .module-col-premium { border-top-color: var(--gold); }
+  }
+  .module-lvl {
+    display: block;
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--accent-deep);
+    margin-bottom: 12px;
+  }
+  .module-col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+  .module-col li { position: relative; padding-left: 18px; font-size: 0.94rem; line-height: 1.45; color: var(--ink-90); }
+  .module-col li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.55em;
+    width: 6px;
+    height: 6px;
+    background: var(--gold);
+    transform: rotate(45deg);
+  }
+  .module-note { margin-top: clamp(18px, 2vw, 24px); font-size: 0.88rem; max-width: 90ch; }
+
+  /* Zwijane porównania (szczegółowe tabele) — kompaktowe w stanie zamkniętym */
+  .full-cmp { margin-top: clamp(28px, 4vw, 52px); scroll-margin-top: 140px; border-top: 1px solid var(--line-strong); }
+  .full-cmp-summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: clamp(22px, 2.4vw, 28px) 0;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(1.2rem, 1.7vw, 1.55rem);
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .full-cmp-summary::-webkit-details-marker { display: none; }
+  .full-cmp-summary:hover { color: var(--accent-deep); }
+  .full-cmp-icon { position: relative; width: 22px; height: 22px; flex-shrink: 0; }
+  .full-cmp-icon::before,
+  .full-cmp-icon::after { content: ''; position: absolute; background: var(--gold); border-radius: 2px; }
+  .full-cmp-icon::before { left: 0; top: 10px; width: 22px; height: 2px; }
+  .full-cmp-icon::after { left: 10px; top: 0; width: 2px; height: 22px; transition: transform 0.3s ease, opacity 0.3s ease; }
+  .full-cmp[open] .full-cmp-icon::after { transform: scaleY(0); opacity: 0; }
+  .full-cmp-body { padding-bottom: clamp(16px, 2vw, 24px); }
+
+  /* Legenda „Jak czytać porównanie?" */
+  .cmp-legend { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+  .cmp-legend > summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    letter-spacing: 0.02em;
+    color: var(--accent-deep);
+    font-weight: 600;
+    list-style: none;
+  }
+  .cmp-legend > summary::-webkit-details-marker { display: none; }
+  .cmp-legend > summary::before { content: '＋ '; }
+  .cmp-legend[open] > summary::before { content: '－ '; }
+  .cmp-legend-list {
+    margin: 14px 0 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--ink-90);
+    max-width: 72ch;
+  }
+  .cmp-legend-hint { margin: 12px 0 0; font-size: 0.85rem; }
+  .cmp-legend-i {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 999px;
+    border: 1px solid var(--line-strong); color: var(--accent-deep);
+    font-size: 0.62rem; font-weight: 700; font-style: italic;
+  }
+  @media (max-width: 560px) {
+    .full-cmp-summary { padding: 15px 0; font-size: 1.05rem; gap: 12px; }
+    .full-cmp-icon { width: 18px; height: 18px; }
+    .full-cmp-icon::before { top: 8px; width: 18px; }
+    .full-cmp-icon::after { left: 8px; height: 18px; }
+  }
+
+  .final-cta-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(28px, 5vw, 80px);
+    align-items: center;
+  }
+  @media (max-width: 900px) { .final-cta-inner { grid-template-columns: 1fr; } }
+  .final-cta-side .lead { max-width: 48ch; }
+  .final-cta-actions { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 1.6rem; }
+</style>

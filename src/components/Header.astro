@@ -1,0 +1,326 @@
+---
+import { primaryNav, contact } from '../data/site';
+
+interface Props {
+  /** light = jasny header (podstrony); overlay = transparentny nad hero, jasny po scrollu (home, case);
+   *  overlay-dark = transparentny nad ciemną sekcją, ciemny po scrollu (kontakt). */
+  variant?: 'light' | 'overlay' | 'overlay-dark';
+}
+const { variant = 'light' } = Astro.props;
+const isOverlay = variant !== 'light';
+const isDark = variant === 'overlay-dark';
+
+const currentPath = Astro.url.pathname.replace(/\/+$/, '') || '/';
+function isActive(href: string): boolean {
+  const normalized = href.replace(/\/+$/, '') || '/';
+  if (normalized === '/') return currentPath === '/';
+  return currentPath === normalized || currentPath.startsWith(`${normalized}/`);
+}
+---
+
+<header
+  class:list={['site-header', { 'is-transparent': isOverlay, 'is-dark': isDark }]}
+  data-header
+>
+  <div class="container header-inner">
+    <a href="/" class="header-logo" aria-label="Panelia Studio — strona główna">
+      <img src="/brand/panelia-logo-dark-horizontal.svg" alt="Panelia Studio" width="164" class="logo-dark" />
+      <img src="/brand/panelia-logo-light-horizontal.svg" alt="Panelia Studio" width="164" class="logo-light" aria-hidden="true" />
+    </a>
+
+    <nav class="header-nav" aria-label="Nawigacja główna">
+      <ul>
+        {
+          primaryNav.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                class:list={['nav-link', { active: isActive(item.href) }]}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="header-actions">
+      <a href={`tel:${contact.phoneHref}`} class="header-phone">{contact.phone}</a>
+      <a href="/kontakt" class="header-cta">Umów rozmowę</a>
+    </div>
+
+    <button
+      type="button"
+      class="nav-toggle"
+      aria-expanded="false"
+      aria-controls="mobile-nav"
+      aria-label="Otwórz menu"
+      data-nav-toggle
+    >
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+
+  <div class="mobile-nav" id="mobile-nav" hidden data-mobile-nav>
+    <nav aria-label="Nawigacja mobilna">
+      <ul>
+        {
+          primaryNav.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                class:list={['mobile-link', { active: isActive(item.href) }]}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <div class="mobile-foot">
+      <a href={`tel:${contact.phoneHref}`} class="mobile-phone">{contact.phone}</a>
+      <a href="/kontakt" class="btn btn-gold mobile-cta">Umów rozmowę</a>
+    </div>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: color-mix(in srgb, var(--paper) 90%, transparent);
+    backdrop-filter: saturate(1.1) blur(12px);
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.35s ease, background-color 0.35s ease;
+  }
+  .site-header[data-scrolled] {
+    border-bottom-color: var(--line);
+    background: color-mix(in srgb, var(--paper) 96%, transparent);
+  }
+
+  /* Transparentny nad hero / ciemną sekcją */
+  .site-header.is-transparent {
+    position: fixed;
+    inset: 0 0 auto 0;
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom-color: transparent;
+  }
+  /* Overlay (jasny po scrollu) — home, case study */
+  .site-header.is-transparent:not(.is-dark)[data-scrolled] {
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: saturate(1.1) blur(12px);
+    border-bottom-color: var(--line);
+  }
+  /* Overlay-dark (ciemny po scrollu) — kontakt */
+  .site-header.is-transparent.is-dark[data-scrolled] {
+    background: color-mix(in srgb, var(--dark) 78%, transparent);
+    backdrop-filter: saturate(1.1) blur(12px);
+    border-bottom-color: rgba(243, 239, 230, 0.12);
+  }
+
+  .header-inner {
+    display: flex;
+    align-items: center;
+    gap: clamp(16px, 2vw, 40px);
+    min-height: var(--header-height);
+  }
+
+  .header-logo { flex-shrink: 0; display: block; position: relative; }
+  .header-logo img {
+    width: clamp(165px, 14vw, 215px);
+    height: auto;
+    display: block;
+    transition: opacity 0.3s ease;
+  }
+  .logo-light { position: absolute; inset: 0; opacity: 0; }
+
+  .header-nav { margin-left: auto; }
+  .header-nav ul {
+    display: flex;
+    align-items: center;
+    gap: clamp(14px, 1.6vw, 30px);
+    list-style: none; margin: 0; padding: 0;
+  }
+  .nav-link {
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    color: var(--ink-90);
+    padding: 0.4em 0;
+    position: relative;
+    transition: color 0.2s ease;
+  }
+  .nav-link::after {
+    content: '';
+    position: absolute; left: 0; bottom: -2px;
+    width: 100%; height: 1.5px; background: var(--gold);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 0.28s ease;
+  }
+  .nav-link:hover::after, .nav-link.active::after { transform: scaleX(1); }
+  .nav-link.active { color: var(--ink); }
+
+  .header-actions { display: flex; align-items: center; gap: clamp(12px, 1.4vw, 24px); flex-shrink: 0; }
+  .header-phone {
+    font-size: 0.86rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    white-space: nowrap;
+    transition: color 0.2s ease;
+  }
+  .header-phone:hover { color: var(--accent-deep); }
+  .header-cta {
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 0.85em 1.5em;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    color: var(--paper);
+    background: var(--ink);
+    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+    white-space: nowrap;
+  }
+  .header-cta:hover { background: var(--accent-deep); border-color: var(--accent-deep); }
+
+  /* ===== Warianty jasnej treści na ciemnym tle =====
+     overlay: jasne tylko przed scrollem; overlay-dark: jasne zawsze. */
+  .is-transparent:not(.is-dark):not([data-scrolled]) .logo-dark,
+  .is-transparent.is-dark .logo-dark { opacity: 0; }
+  .is-transparent:not(.is-dark):not([data-scrolled]) .logo-light,
+  .is-transparent.is-dark .logo-light { opacity: 1; }
+
+  .is-transparent:not(.is-dark):not([data-scrolled]) .nav-link,
+  .is-transparent.is-dark .nav-link { color: var(--on-dark); }
+  .is-transparent:not(.is-dark):not([data-scrolled]) .nav-link.active,
+  .is-transparent.is-dark .nav-link.active { color: #fff; }
+
+  .is-transparent:not(.is-dark):not([data-scrolled]) .header-phone,
+  .is-transparent.is-dark .header-phone { color: var(--on-dark); }
+  .is-transparent:not(.is-dark):not([data-scrolled]) .header-phone:hover,
+  .is-transparent.is-dark .header-phone:hover { color: var(--gold); }
+
+  .is-transparent:not(.is-dark):not([data-scrolled]) .header-cta,
+  .is-transparent.is-dark .header-cta {
+    color: var(--dark);
+    background: var(--on-dark);
+    border-color: var(--on-dark);
+  }
+  .is-transparent:not(.is-dark):not([data-scrolled]) .header-cta:hover,
+  .is-transparent.is-dark .header-cta:hover { background: var(--gold); border-color: var(--gold); }
+
+  .is-transparent:not(.is-dark):not([data-scrolled]) .nav-toggle span,
+  .is-transparent.is-dark .nav-toggle span { background: var(--on-dark); }
+
+  /* Toggle mobilny */
+  .nav-toggle {
+    display: none;
+    flex-direction: column; justify-content: center; gap: 5px;
+    width: 46px; height: 46px; margin-left: auto;
+    background: transparent; border: 0; cursor: pointer; padding: 11px;
+  }
+  .nav-toggle span { display: block; height: 2px; width: 100%; background: var(--ink); transition: transform 0.3s ease, opacity 0.3s ease, background-color 0.3s ease; }
+  .nav-toggle[aria-expanded='true'] span { background: var(--ink); }
+  .nav-toggle[aria-expanded='true'] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .nav-toggle[aria-expanded='true'] span:nth-child(2) { opacity: 0; }
+  .nav-toggle[aria-expanded='true'] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  .mobile-nav {
+    position: fixed;
+    inset: var(--header-height) 0 0 0;
+    background: var(--paper);
+    padding: clamp(24px, 5vw, 48px) var(--gutter);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow-y: auto;
+  }
+  .mobile-nav[hidden] { display: none; }
+  .mobile-nav ul { list-style: none; margin: 0; padding: 0; }
+  .mobile-link {
+    display: block;
+    padding: 0.7em 0;
+    font-size: clamp(1.7rem, 7vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    border-bottom: 1px solid var(--line);
+  }
+  .mobile-link.active { color: var(--accent-deep); }
+  .mobile-foot { padding-top: 28px; display: flex; flex-direction: column; gap: 16px; }
+  .mobile-phone { font-size: 1.2rem; font-weight: 700; }
+  .mobile-cta { width: 100%; }
+
+  @media (max-width: 1080px) {
+    .header-nav, .header-actions { display: none; }
+    .nav-toggle { display: flex; }
+  }
+  @media (min-width: 1081px) { .mobile-nav { display: none; } }
+</style>
+
+<script>
+  const header = document.querySelector<HTMLElement>('[data-header]');
+  const toggle = document.querySelector<HTMLButtonElement>('[data-nav-toggle]');
+  const mobileNav = document.querySelector<HTMLElement>('[data-mobile-nav]');
+
+  if (toggle && mobileNav) {
+    const focusableSelector = 'a[href], button:not([disabled])';
+
+    const setOpen = (open: boolean) => {
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Zamknij menu' : 'Otwórz menu');
+      mobileNav.hidden = !open;
+      document.body.style.overflow = open ? 'hidden' : '';
+      if (open) {
+        const first = mobileNav.querySelector<HTMLElement>(focusableSelector);
+        first?.focus();
+      }
+    };
+
+    toggle.addEventListener('click', () => setOpen(mobileNav.hasAttribute('hidden')));
+
+    mobileNav.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', () => setOpen(false));
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (mobileNav.hidden) return;
+      if (event.key === 'Escape') {
+        setOpen(false);
+        toggle.focus();
+      } else if (event.key === 'Tab') {
+        const focusables = Array.from(
+          mobileNav.querySelectorAll<HTMLElement>(focusableSelector),
+        ).filter((el) => el.offsetParent !== null);
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+        if (event.shiftKey && active === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && active === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    });
+  }
+
+  if (header) {
+    const onScroll = () => {
+      if (window.scrollY > 12) header.setAttribute('data-scrolled', '');
+      else header.removeAttribute('data-scrolled');
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+  }
+</script>

@@ -1,0 +1,112 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import { contact } from '../data/site';
+
+// UWAGA DLA ZESPOŁU: przed publikacją produkcyjną należy potwierdzić i uzupełnić
+// pełne dane rejestrowe administratora (pełna nazwa podmiotu prowadzącego Panelia Studio, NIP).
+// Poniższy dokument ma charakter bazowy i powinien zostać zweryfikowany prawnie.
+---
+
+<BaseLayout
+  title="Polityka prywatności"
+  description="Polityka prywatności serwisu Panelia Studio — zasady przetwarzania danych osobowych i wykorzystania plików cookie."
+  path="/polityka-prywatnosci"
+  noindex={true}
+>
+  <PageHero eyebrow="Informacje" title="Polityka prywatności" />
+
+  <section class="section">
+    <div class="container container-narrow legal">
+      <p class="muted legal-intro">
+        Niniejsza polityka prywatności opisuje zasady przetwarzania danych osobowych osób
+        korzystających z serwisu <strong>paneliastudio.pl</strong> oraz kontaktujących się z Panelia
+        Studio.
+      </p>
+
+      <h2>1. Administrator danych</h2>
+      <p>
+        Administratorem danych osobowych jest Panelia Studio. Kontakt w sprawach dotyczących danych
+        osobowych: <a href={`mailto:${contact.email}`}>{contact.email}</a>, tel.
+        <a href={`tel:${contact.phoneHref}`}>{contact.phone}</a>, adres: {contact.address.street},
+        {contact.address.postalCode} {contact.address.city}.
+      </p>
+
+      <h2>2. Zakres i cele przetwarzania</h2>
+      <p>Dane osobowe przetwarzamy w następujących celach:</p>
+      <ul>
+        <li>obsługa zapytań przesłanych przez formularz kontaktowy, e-mail lub telefon,</li>
+        <li>przygotowanie odpowiedzi oraz ewentualnej oferty na prośbę osoby kontaktującej się,</li>
+        <li>prowadzenie korespondencji i dalszych ustaleń dotyczących współpracy.</li>
+      </ul>
+      <p>
+        Podanie danych jest dobrowolne, jednak niezbędne do obsługi zapytania. W formularzu prosimy
+        o imię i nazwisko, adres e-mail, opcjonalnie numer telefonu oraz treść wiadomości.
+      </p>
+
+      <h2>3. Podstawa prawna</h2>
+      <p>
+        Dane przetwarzamy na podstawie zgody osoby, której dane dotyczą (art. 6 ust. 1 lit. a RODO),
+        oraz w celu podjęcia działań na żądanie tej osoby przed ewentualnym zawarciem umowy (art. 6
+        ust. 1 lit. b RODO), a także w oparciu o prawnie uzasadniony interes administratora, jakim
+        jest obsługa korespondencji (art. 6 ust. 1 lit. f RODO).
+      </p>
+
+      <h2>4. Okres przechowywania</h2>
+      <p>
+        Dane przechowujemy przez czas niezbędny do obsługi zapytania i prowadzenia korespondencji, a
+        następnie przez okres wynikający z przepisów prawa lub do czasu wycofania zgody albo
+        wniesienia skutecznego sprzeciwu.
+      </p>
+
+      <h2>5. Odbiorcy danych</h2>
+      <p>
+        Dane mogą być powierzane podmiotom wspierającym administratora w prowadzeniu działalności
+        (np. dostawcom usług hostingowych, systemom obsługi zgłoszeń) wyłącznie w zakresie
+        niezbędnym do realizacji wskazanych celów i na podstawie odpowiednich umów.
+      </p>
+
+      <h2>6. Prawa osób, których dane dotyczą</h2>
+      <p>Przysługuje Ci prawo do:</p>
+      <ul>
+        <li>dostępu do swoich danych oraz otrzymania ich kopii,</li>
+        <li>sprostowania (poprawiania) danych,</li>
+        <li>usunięcia danych,</li>
+        <li>ograniczenia przetwarzania,</li>
+        <li>przenoszenia danych,</li>
+        <li>wniesienia sprzeciwu wobec przetwarzania,</li>
+        <li>wycofania zgody w dowolnym momencie (bez wpływu na zgodność z prawem wcześniejszego przetwarzania),</li>
+        <li>wniesienia skargi do Prezesa Urzędu Ochrony Danych Osobowych.</li>
+      </ul>
+
+      <h2>7. Pliki cookie</h2>
+      <p>
+        Serwis może wykorzystywać niezbędne pliki cookie zapewniające prawidłowe działanie strony.
+        Nie stosujemy plików cookie w celach marketingowych bez odrębnej zgody. Ustawienia plików
+        cookie możesz zmienić w swojej przeglądarce.
+      </p>
+
+      <h2>8. Zmiany polityki</h2>
+      <p>
+        Polityka prywatności może być aktualizowana. Aktualna wersja jest każdorazowo dostępna w
+        serwisie.
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .legal h2 {
+    font-size: clamp(1.3rem, 2vw, 1.7rem);
+    margin: 2.4rem 0 0.9rem;
+  }
+  .legal-intro { font-size: 1.05rem; margin-bottom: 1rem; }
+  .legal ul {
+    margin: 0 0 1rem;
+    padding-left: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .legal a { text-decoration: underline; text-underline-offset: 2px; }
+</style>

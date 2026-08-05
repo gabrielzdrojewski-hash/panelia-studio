@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Strona nie została znaleziona"
+  description="Nie znaleziono strony. Wróć na stronę główną Panelia Studio."
+  path="/404"
+  noindex={true}
+>
+  <section class="section error-page">
+    <div class="container container-narrow error-inner">
+      <p class="eyebrow">Błąd 404</p>
+      <h1>Nie znaleźliśmy tej strony</h1>
+      <p class="lead muted">
+        Strona mogła zostać przeniesiona lub nie istnieje. Zajrzyj na stronę główną albo
+        skorzystaj z nawigacji.
+      </p>
+      <div class="error-actions">
+        <a href="/" class="btn">Strona główna</a>
+        <a href="/realizacje" class="btn btn-ghost">Zobacz realizacje</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .error-page {
+    min-height: 60vh;
+    display: flex;
+    align-items: center;
+  }
+  .error-inner {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.1rem;
+  }
+  .error-actions {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+</style>

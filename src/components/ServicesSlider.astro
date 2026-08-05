@@ -1,0 +1,160 @@
+---
+import { serviceReel } from '../data/content';
+import { getMediaById } from '../lib/media';
+
+const items = serviceReel
+  .map((item) => ({ ...item, media: getMediaById(item.mediaId) }))
+  .filter((item) => item.media);
+---
+
+<div class="slider" data-slider>
+  <div class="slider-track" data-slider-track tabindex="0" role="group" aria-label="Zakres usług — przewijana galeria">
+    {
+      items.map((item) => (
+        <a href={item.href} class="service-slide">
+          <div class="service-slide-media media-frame hoverable">
+            <img
+              src={item.media!.path}
+              alt={item.media!.alt}
+              width={item.media!.width}
+              height={item.media!.height}
+              loading="lazy"
+              decoding="async"
+              sizes="(max-width: 700px) 82vw, 34vw"
+            />
+            <span class="service-slide-num">{item.number}</span>
+          </div>
+          <p class="service-slide-tag">
+            {item.media!.type === 'realization' ? 'Realizacja' : 'Wizualizacja projektowa'}
+          </p>
+          <h3 class="service-slide-title">{item.title}</h3>
+          <p class="service-slide-summary muted">{item.summary}</p>
+        </a>
+      ))
+    }
+  </div>
+
+  <div class="slider-controls">
+    <button type="button" class="slider-btn" data-slider-prev aria-label="Poprzednie usługi">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+    </button>
+    <button type="button" class="slider-btn" data-slider-next aria-label="Następne usługi">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+    </button>
+  </div>
+</div>
+
+<style>
+  .slider { position: relative; }
+
+  .slider-track {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: min(34%, 460px);
+    gap: clamp(18px, 2vw, 32px);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-behavior: smooth;
+    padding-bottom: 8px;
+    /* ukryj scrollbar (subtelnie) */
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+  .slider-track::-webkit-scrollbar { height: 6px; }
+  .slider-track::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
+  .slider-track:focus-visible { outline-offset: 6px; }
+
+  @media (max-width: 1024px) { .slider-track { grid-auto-columns: min(60%, 420px); } }
+  @media (max-width: 640px) { .slider-track { grid-auto-columns: 82%; } }
+
+  .service-slide {
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    color: var(--ink);
+  }
+  .service-slide-media { margin-bottom: 6px; }
+  .service-slide-tag {
+    font-size: 0.68rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--accent-deep);
+    margin: 0;
+  }
+  .service-slide-media { aspect-ratio: 3 / 4; position: relative; }
+  .service-slide-num {
+    position: absolute;
+    left: 18px; top: 14px;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.6rem;
+    letter-spacing: -0.03em;
+    color: #fff;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.4);
+  }
+  .service-slide-title { font-size: clamp(1.3rem, 2vw, 1.7rem); }
+  .service-slide-summary { font-size: 0.98rem; max-width: 40ch; }
+
+  .slider-controls { display: flex; gap: 12px; margin-top: clamp(24px, 3vw, 40px); }
+  .slider-btn {
+    width: 56px; height: 56px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1.5px solid var(--line-strong);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .slider-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .slider-btn[disabled] { opacity: 0.35; cursor: default; }
+  .slider-btn[disabled]:hover { background: transparent; color: var(--ink); border-color: var(--line-strong); }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-slider]').forEach((slider) => {
+    const track = slider.querySelector<HTMLElement>('[data-slider-track]');
+    const prev = slider.querySelector<HTMLButtonElement>('[data-slider-prev]');
+    const next = slider.querySelector<HTMLButtonElement>('[data-slider-next]');
+    if (!track) return;
+
+    const step = () => {
+      const first = track.querySelector<HTMLElement>('.service-slide');
+      const gap = parseFloat(getComputedStyle(track).columnGap || '24') || 24;
+      return first ? first.offsetWidth + gap : track.clientWidth * 0.8;
+    };
+
+    const update = () => {
+      const max = track.scrollWidth - track.clientWidth - 2;
+      if (prev) prev.disabled = track.scrollLeft <= 2;
+      if (next) next.disabled = track.scrollLeft >= max;
+    };
+
+    prev?.addEventListener('click', () => track.scrollBy({ left: -step(), behavior: 'smooth' }));
+    next?.addEventListener('click', () => track.scrollBy({ left: step(), behavior: 'smooth' }));
+    track.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+
+    // Przeciąganie myszą (pointer drag) — bez blokowania natywnego scrolla dotykowego.
+    let down = false;
+    let startX = 0;
+    let startScroll = 0;
+    track.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch') return;
+      down = true;
+      startX = e.clientX;
+      startScroll = track.scrollLeft;
+      track.style.cursor = 'grabbing';
+    });
+    const end = () => { down = false; track.style.cursor = ''; };
+    track.addEventListener('pointermove', (e) => {
+      if (!down) return;
+      track.scrollLeft = startScroll - (e.clientX - startX);
+    });
+    track.addEventListener('pointerup', end);
+    track.addEventListener('pointerleave', end);
+  });
+</script>

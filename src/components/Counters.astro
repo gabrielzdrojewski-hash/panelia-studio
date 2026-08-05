@@ -1,0 +1,101 @@
+---
+import type { Stat } from '../data/content';
+
+interface Props {
+  stats: Stat[];
+}
+const { stats } = Astro.props;
+---
+
+<div class="counters" data-counters>
+  {
+    stats.map((stat, index) => (
+      <div class="counter" data-reveal style={`--reveal-delay: ${index * 90}ms`}>
+        <span class="counter-value" data-count-to={stat.value} data-count-suffix={stat.suffix ?? ''}>
+          <span aria-hidden="true" data-count-display>0</span>
+          <span class="sr-only">
+            {stat.value}
+            {stat.suffix}
+          </span>
+        </span>
+        <span class="counter-label">{stat.label}</span>
+      </div>
+    ))
+  }
+</div>
+
+<style>
+  .counters {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: clamp(24px, 4vw, 64px);
+  }
+  @media (max-width: 780px) { .counters { grid-template-columns: 1fr 1fr; row-gap: clamp(32px, 8vw, 56px); } }
+
+  .counter { display: flex; flex-direction: column; gap: 10px; }
+  .counter-value {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(3.4rem, 8vw, 6.5rem);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    color: var(--gold);
+  }
+  .counter-label {
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+    color: var(--on-dark-muted);
+    max-width: 18ch;
+  }
+</style>
+
+<script>
+  const groups = document.querySelectorAll<HTMLElement>('[data-counters]');
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const animate = (el: HTMLElement) => {
+    const value = el.querySelectorAll<HTMLElement>('[data-count-to]');
+    value.forEach((wrap) => {
+      const target = Number(wrap.getAttribute('data-count-to')) || 0;
+      const suffix = wrap.getAttribute('data-count-suffix') || '';
+      const display = wrap.querySelector<HTMLElement>('[data-count-display]');
+      if (!display) return;
+
+      if (prefersReduced || target <= 0) {
+        display.textContent = `${target}${suffix}`;
+        return;
+      }
+
+      const duration = 1200;
+      const start = performance.now();
+      const step = (now: number) => {
+        const progress = Math.min((now - start) / duration, 1);
+        // easeOutCubic
+        const eased = 1 - Math.pow(1 - progress, 3);
+        display.textContent = `${Math.round(eased * target)}${suffix}`;
+        if (progress < 1) requestAnimationFrame(step);
+        else display.textContent = `${target}${suffix}`;
+      };
+      requestAnimationFrame(step);
+    });
+  };
+
+  if (groups.length) {
+    if (prefersReduced || !('IntersectionObserver' in window)) {
+      groups.forEach(animate);
+    } else {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              animate(entry.target as HTMLElement);
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.4 },
+      );
+      groups.forEach((group) => observer.observe(group));
+    }
+  }
+</script>
