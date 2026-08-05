@@ -1,0 +1,74 @@
+# ============================================================
+# Panelia Studio — reguły Apache dla statycznego buildu Astro
+# Domena kanoniczna: https://paneliastudio.pl (HTTPS, bez www)
+# Nie zawiera reguł WordPressa. Nie przekierowuje wszystkiego na "/".
+# ============================================================
+
+# --- 2. Ustawienia podstawowe ---
+Options -MultiViews
+DirectoryIndex index.html
+ErrorDocument 404 /404.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # --- 1. Kanonizacja: wymuś HTTPS oraz domenę bez "www" ---
+  # Jedna reguła obejmuje http->https oraz www->bez-www. Bez pętli:
+  # po przekierowaniu HTTPS=on i host nie zaczyna się od "www", więc warunki nie zachodzą.
+  RewriteCond %{HTTPS} !=on [OR]
+  RewriteCond %{HTTP_HOST} ^www\. [NC]
+  RewriteRule ^ https://paneliastudio.pl%{REQUEST_URI} [L,R=301]
+
+  # --- 3. Przekierowania 301 starych adresów WordPress ---
+  # Query string jest zachowywany domyślnie przez Apache.
+  RewriteRule ^home-2-2/?$     /            [L,R=301]
+  RewriteRule ^about-us/?$     /o-nas       [L,R=301]
+  RewriteRule ^contact-us/?$   /kontakt     [L,R=301]
+  RewriteRule ^pricing-plan/?$ /pakiety     [L,R=301]
+  RewriteRule ^services/?$     /oferta      [L,R=301]
+  RewriteRule ^uslugi/?$       /oferta      [L,R=301]
+  RewriteRule ^gallery/?$      /wizualizacje [L,R=301]
+  RewriteRule ^blog/?$         /            [L,R=301]
+
+  # --- 4. 410 Gone: WooCommerce oraz strony demo/testowe (treść usunięta na stałe) ---
+  RewriteRule ^shop/?$             - [G]
+  RewriteRule ^cart/?$             - [G]
+  RewriteRule ^checkout/?$         - [G]
+  RewriteRule ^my-account/?$       - [G]
+  RewriteRule ^wishlist/?$         - [G]
+  RewriteRule ^sample-page/?$      - [G]
+  RewriteRule ^product/            - [G]
+  RewriteRule ^product-category/   - [G]
+  RewriteRule ^elementor-          - [G]
+  RewriteRule ^demo/?              - [G]
+  RewriteRule ^test/?              - [G]
+</IfModule>
+
+# --- 5. Kompresja (mod_deflate) ---
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html
+  AddOutputFilterByType DEFLATE text/css
+  AddOutputFilterByType DEFLATE application/javascript
+  AddOutputFilterByType DEFLATE application/json
+  AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# --- 6. Cache (mod_expires) ---
+<IfModule mod_expires.c>
+  ExpiresActive On
+
+  # HTML — bez długiego cache (szybkie propagowanie zmian treści)
+  ExpiresByType text/html "access plus 0 seconds"
+
+  # CSS i JS — 1 rok (zasoby wersjonowane/niemutowalne)
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+
+  # Obrazy i fonty — 1 rok
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType font/woff "access plus 1 year"
+</IfModule>
