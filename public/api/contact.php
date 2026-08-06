@@ -6,10 +6,12 @@ declare(strict_types=1);
  * Panelia Studio — Contact Gateway (Fatica ERP).
  *
  * Przepływ:
- *   przeglądarka -> POST /api/contact (ten plik) -> POST https://app.fatica.pl/api/public/leads
+ *   przeglądarka -> POST /api/contact (ten plik) -> POST https://crm3.fatica.pl/api/public/leads
  *
- * Token i adres ERP pozostają WYŁĄCZNIE po stronie serwera (getenv() lub prywatny plik
- * /domains/paneliastudio.pl/private_html/panelia-erp-config.php). Nigdy nie trafiają do klienta.
+ * Token i adres ERP pozostają WYŁĄCZNIE po stronie serwera, w bezpiecznym pliku poza web-rootem:
+ * /home/kdurwolrtv/domains/paneliastudio.pl/secure_config/panelia-erp-config.php (700 / plik 600).
+ * NIE używamy private_html (dowiązanie do public_html) ani żadnego fallbacku do web-rootu.
+ * Nigdy nie trafiają do klienta.
  *
  * Plik jest testowalny: gdy zdefiniowano stałą PANELIA_CONTACT_TEST, żądanie nie jest
  * automatycznie obsługiwane — udostępnione są tylko czyste funkcje pomocnicze.
@@ -40,91 +42,101 @@ const PANELIA_MIN_FORM_SECONDS = 2;
 // KONFIGURACJA
 // ==================================================================
 
-function panelia_env_str(string $name): ?string
+/**
+ * Bezpieczna ścieżka konfiguracji produkcyjnej — POZA web-rootem, na tym koncie hostingowym.
+ * UWAGA: na tym hostingu `private_html` jest dowiązaniem do `public_html`, więc NIE jest prywatny
+ * i NIE wolno go używać. Jedynym źródłem konfiguracji jest `secure_config` (700 / plik 600).
+ */
+function panelia_secure_config_path(): string
 {
-    $v = getenv($name);
-    if ($v === false) {
-        return null;
+    return '/home/kdurwolrtv/domains/paneliastudio.pl/secure_config/panelia-erp-config.php';
+}
+
+/** public_html = katalog nadrzędny „api" (gateway leży w public_html/api/contact.php). */
+function panelia_public_html_dir(): ?string
+{
+    $dir = realpath(dirname(__DIR__));
+    return $dir === false ? null : $dir;
+}
+
+/** Czy $path leży w katalogu $dir (po normalizacji separatorów; porównanie na granicy segmentu). */
+function panelia_path_is_inside(string $path, string $dir): bool
+{
+    $p = rtrim(str_replace('\\', '/', $path), '/');
+    $d = rtrim(str_replace('\\', '/', $dir), '/');
+    if ($d === '') {
+        return false;
     }
-    $v = trim($v);
-    return $v === '' ? null : $v;
+    return $p === $d || strncmp($p . '/', $d . '/', strlen($d) + 1) === 0;
 }
 
 /**
- * Ładuje konfigurację: najpierw getenv(), potem prywatny plik serwera.
- * Ścieżka prywatna liczona względem tego pliku (public_html/api/contact.php),
- * bez hardcodowania nazwy konta hostingowego.
+ * Ładuje konfigurację PRODUKCYJNĄ WYŁĄCZNIE z bezpiecznego pliku poza web-rootem
+ * (domyślnie secure_config/panelia-erp-config.php). BRAK jakiegokolwiek fallbacku do private_html,
+ * public_html, katalogu repozytorium ani zmiennych env prowadzących do konfiguracji w web-roocie.
+ *
+ * Odrzuca (zwraca null → neutralne 503), gdy: plik nie istnieje, nie jest zwykłym plikiem,
+ * realpath leży wewnątrz public_html, plik nie zwraca tablicy, endpoint jest pusty, token jest pusty.
+ * Logi i rate-limit trafiają do katalogu bezpiecznego pliku (poza web-rootem).
+ *
+ * Parametry (opcjonalne) służą wyłącznie testowalności — produkcja używa domyślnych.
  */
-function panelia_load_config(): array
+function panelia_load_config(?string $configFile = null, ?string $publicHtmlDir = null): ?array
 {
-    $privateDir = dirname(__DIR__, 2) . '/private_html';
+    $configFile = $configFile ?? panelia_secure_config_path();
+    if ($publicHtmlDir === null) {
+        $publicHtmlDir = panelia_public_html_dir();
+    } else {
+        $resolved = realpath($publicHtmlDir);
+        $publicHtmlDir = $resolved !== false ? $resolved : $publicHtmlDir;
+    }
+
+    // Plik musi istnieć i być ZWYKŁYM plikiem.
+    if (! is_file($configFile)) {
+        return null;
+    }
+    $real = realpath($configFile);
+    if ($real === false || ! is_file($real)) {
+        return null;
+    }
+
+    // ODRZUĆ, gdy realpath konfiguracji leży wewnątrz public_html (web-root) — także przez dowiązanie.
+    if ($publicHtmlDir !== null && $publicHtmlDir !== '' && panelia_path_is_inside($real, $publicHtmlDir)) {
+        return null;
+    }
+
+    /** @noinspection PhpIncludeInspection */
+    $data = require $real;
+    if (! is_array($data)) {
+        return null;
+    }
+
+    $url = (isset($data['erp_public_leads_url']) && is_string($data['erp_public_leads_url']))
+        ? trim($data['erp_public_leads_url']) : '';
+    $token = (isset($data['erp_token']) && is_string($data['erp_token']))
+        ? trim($data['erp_token']) : '';
+    if ($url === '' || $token === '') {
+        return null; // pusty endpoint lub pusty token → odrzuć
+    }
 
     $config = [
-        'enabled' => false,
-        'erp_public_leads_url' => 'https://app.fatica.pl/api/public/leads',
-        'erp_token' => '',
-        'request_timeout_ms' => 10000,
-        'connect_timeout_ms' => 5000,
-        'mock' => false,
-        'allow_mock' => false, // dodatkowy strażnik: mock aktywny TYLKO gdy mock=true I allow_mock=true
-        'rate_limit_max_requests' => 5,
-        'rate_limit_window_seconds' => 900,
-        'ip_hash_salt' => '',
-        'is_production' => true,
-        'private_dir' => $privateDir,
+        'enabled' => true,
+        'erp_public_leads_url' => $url,
+        'erp_token' => $token,
+        'request_timeout_ms' => isset($data['request_timeout_ms']) ? (int) $data['request_timeout_ms'] : 10000,
+        'connect_timeout_ms' => isset($data['connect_timeout_ms']) ? (int) $data['connect_timeout_ms'] : 5000,
+        'mock' => (bool) ($data['mock'] ?? false),
+        'allow_mock' => (bool) ($data['allow_mock'] ?? false),
+        'is_production' => (bool) ($data['is_production'] ?? true),
+        'rate_limit_max_requests' => isset($data['rate_limit_max_requests']) ? (int) $data['rate_limit_max_requests'] : 5,
+        'rate_limit_window_seconds' => isset($data['rate_limit_window_seconds']) ? (int) $data['rate_limit_window_seconds'] : 900,
+        'ip_hash_salt' => is_string($data['ip_hash_salt'] ?? null) ? (string) $data['ip_hash_salt'] : '',
+        // Logi + rate-limit w katalogu bezpiecznego pliku (secure_config, poza web-rootem).
+        'private_dir' => dirname($real),
     ];
 
-    // 1) Prywatny plik konfiguracji (jeśli istnieje).
-    $file = $privateDir . '/panelia-erp-config.php';
-    if (is_readable($file)) {
-        /** @noinspection PhpIncludeInspection */
-        $fromFile = require $file;
-        if (is_array($fromFile)) {
-            $config = array_merge($config, $fromFile);
-        }
-    }
-
-    // 2) getenv() nadpisuje, gdy ustawione (priorytet zgodnie ze specyfikacją).
-    $url = panelia_env_str('FATICA_ERP_PUBLIC_LEADS_URL');
-    if ($url !== null) {
-        $config['erp_public_leads_url'] = $url;
-    }
-    $token = panelia_env_str('FATICA_ERP_PANELIA_TOKEN');
-    if ($token !== null) {
-        $config['erp_token'] = $token;
-    }
-    $timeout = panelia_env_str('FATICA_ERP_REQUEST_TIMEOUT_MS');
-    if ($timeout !== null && ctype_digit($timeout)) {
-        $config['request_timeout_ms'] = (int) $timeout;
-    }
-    $mock = panelia_env_str('FATICA_ERP_CONTACT_MOCK');
-    if ($mock !== null) {
-        $config['mock'] = in_array(strtolower($mock), ['1', 'true', 'yes'], true);
-    }
-    $allowMock = panelia_env_str('FATICA_ERP_CONTACT_ALLOW_MOCK');
-    if ($allowMock !== null) {
-        $config['allow_mock'] = in_array(strtolower($allowMock), ['1', 'true', 'yes'], true);
-    }
-    $contactEnv = panelia_env_str('FATICA_ERP_CONTACT_ENV');
-    if ($contactEnv !== null) {
-        $config['is_production'] = !in_array(
-            strtolower($contactEnv),
-            ['development', 'dev', 'test', 'testing', 'local'],
-            true
-        );
-    }
-    $enabled = panelia_env_str('FATICA_ERP_CONTACT_ENABLED');
-    if ($enabled !== null) {
-        $config['enabled'] = in_array(strtolower($enabled), ['1', 'true', 'yes'], true);
-    }
-    // Enabled staje się prawdą także, gdy jest token, chyba że jawnie wyłączono w pliku.
-    if ($config['erp_token'] !== '' && !array_key_exists('enabled', $fromFile ?? [])) {
-        $config['enabled'] = true;
-    }
-
-    // Salt do hashowania IP — jeśli nie podano, pochodna tokenu (nie trafia do logów/klienta).
-    if (($config['ip_hash_salt'] ?? '') === '' && $config['erp_token'] !== '') {
-        $config['ip_hash_salt'] = hash('sha256', 'ip-salt|' . $config['erp_token']);
+    if ($config['ip_hash_salt'] === '') {
+        $config['ip_hash_salt'] = hash('sha256', 'ip-salt|' . $token);
     }
 
     return $config;
@@ -646,6 +658,12 @@ function panelia_contact_main(): void
     $in = json_decode($raw === '' ? 'null' : $raw, true);
     if (!is_array($in)) {
         panelia_send_json(400, ['ok' => false, 'message' => 'Nieprawidłowe dane żądania.', 'request_id' => $correlationId]);
+    }
+
+    // Konfiguracja produkcyjna MUSI pochodzić z bezpiecznego pliku poza web-rootem (secure_config).
+    // Brak/nieprawidłowa konfiguracja → neutralne 503 (bez ujawniania ścieżek, tokenu, konfiguracji, trace).
+    if ($config === null) {
+        panelia_send_json(503, ['ok' => false, 'message' => 'Formularz jest chwilowo niedostępny. Skontaktuj się z nami bezpośrednio.', 'request_id' => $correlationId]);
     }
 
     $ip = panelia_client_ip();

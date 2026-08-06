@@ -95,18 +95,8 @@ check('submitted_at valid iso kept', strpos(panelia_iso_or_now('2024-01-02T03:04
 // mask_email
 check('mask email', panelia_mask_email('jan.kowalski@example.com') === 'j***@example.com');
 
-// Sekcja 2: wyliczenie ścieżki private_html względem public/api/contact.php.
-$norm = static fn(string $p): string => str_replace('\\', '/', $p);
-$cfg = panelia_load_config();
-$apiDir = dirname((new ReflectionFunction('panelia_load_config'))->getFileName());
-$expected = $norm(dirname($apiDir, 2) . '/private_html');
-check('2 private_dir = ../../private_html (poza public_html)', $norm($cfg['private_dir']) === $expected);
-check('2 private_dir kończy się na /private_html', str_ends_with($norm($cfg['private_dir']), '/private_html'));
-check('2 private_dir nie w public_html', strpos($norm($cfg['private_dir']), '/public_html/') === false);
-
-// Sekcja 3: mock domyślnie wyłączony (allow_mock=false w defaultach).
-check('3 mock domyślnie false', ($cfg['mock'] ?? false) === false);
-check('3 allow_mock domyślnie false', ($cfg['allow_mock'] ?? false) === false);
+// Sekcja 2/3 (private_html + domyślna konfiguracja) — USUNIĘTE: konfiguracja pochodzi teraz WYŁĄCZNIE z
+// bezpiecznego pliku poza web-rootem (secure_config). Testy ładowania/walidacji poniżej (sekcja „cfg:").
 
 // Sekcja 8/18/19/20: budowa payloadu do ERP.
 $vd = panelia_validate($base)['data'];
@@ -228,6 +218,90 @@ check(
     'contract mock enabled in local test',
     panelia_mock_enabled(['mock' => true, 'allow_mock' => true, 'is_production' => false])
 );
+
+// ================================================================
+// Konfiguracja produkcyjna: WYŁĄCZNIE bezpieczny plik poza web-rootem (secure_config).
+// private_html jest dowiązaniem do public_html → NIE wolno go używać.
+// ================================================================
+$tmpBase = sys_get_temp_dir() . '/panelia_cfg_' . uniqid('', true);
+@mkdir($tmpBase, 0700, true);
+$pub = $tmpBase . '/public_html';
+$secure = $tmpBase . '/secure_config';
+@mkdir($pub, 0700, true);
+@mkdir($secure, 0700, true);
+
+$validCfg = '<?php return ["erp_public_leads_url" => "https://crm3.fatica.pl/api/public/leads", "erp_token" => "PROD-TOKEN-SENTINEL"];';
+
+// A) Poprawna ścieżka secure_config (poza public_html) → akceptacja.
+$secureFile = $secure . '/panelia-erp-config.php';
+file_put_contents($secureFile, $validCfg);
+$cfg = panelia_load_config($secureFile, $pub);
+check('cfg: secure_config accepted (outside public_html)', is_array($cfg) && ($cfg['enabled'] ?? false) === true);
+check('cfg: endpoint = crm3.fatica.pl', is_array($cfg) && $cfg['erp_public_leads_url'] === 'https://crm3.fatica.pl/api/public/leads');
+check('cfg: token loaded from secure_config', is_array($cfg) && $cfg['erp_token'] === 'PROD-TOKEN-SENTINEL');
+check('cfg: private_dir = secure_config dir (poza web-rootem)', is_array($cfg)
+    && rtrim(str_replace('\\', '/', $cfg['private_dir']), '/') === rtrim(str_replace('\\', '/', realpath($secure)), '/'));
+
+// B) Konfiguracja fizycznie w public_html → odrzucona.
+$webFile = $pub . '/panelia-erp-config.php';
+file_put_contents($webFile, $validCfg);
+check('cfg: reject config under public_html', panelia_load_config($webFile, $pub) === null);
+
+// C) private_html (dowiązanie do public_html) → odrzucone (realpath wewnątrz public_html).
+$linkOk = @symlink($pub, $tmpBase . '/private_html');
+if ($linkOk) {
+    $viaLink = $tmpBase . '/private_html/panelia-erp-config.php'; // fizycznie = public_html/panelia-erp-config.php
+    check('cfg: reject config via private_html symlink -> public_html', panelia_load_config($viaLink, $pub) === null);
+} else {
+    check('cfg: reject config in private_html-equivalent (webroot)', panelia_load_config($webFile, $pub) === null);
+}
+
+// D) Brakujący plik → null.
+check('cfg: reject missing config file', panelia_load_config($secure . '/nope.php', $pub) === null);
+
+// E) Nie-tablica → null.
+$notArray = $secure . '/notarray.php';
+file_put_contents($notArray, '<?php return 42;');
+check('cfg: reject config not returning array', panelia_load_config($notArray, $pub) === null);
+
+// F) Pusty token → null.
+$emptyTok = $secure . '/emptytok.php';
+file_put_contents($emptyTok, '<?php return ["erp_public_leads_url" => "https://crm3.fatica.pl/api/public/leads", "erp_token" => ""];');
+check('cfg: reject empty token', panelia_load_config($emptyTok, $pub) === null);
+
+// G) Pusty endpoint → null.
+$emptyUrl = $secure . '/emptyurl.php';
+file_put_contents($emptyUrl, '<?php return ["erp_public_leads_url" => "", "erp_token" => "T"];');
+check('cfg: reject empty endpoint', panelia_load_config($emptyUrl, $pub) === null);
+
+// H) Brak wycieku: nieprawidłowa konfiguracja z sekretem → null i ZERO outputu (żadnych ścieżek/warningów).
+$leaky = $secure . '/leaky.php';
+file_put_contents($leaky, '<?php return ["erp_public_leads_url" => "", "erp_token" => "LEAK-SENTINEL-SECRET"];');
+ob_start();
+$leakResult = panelia_load_config($leaky, $pub);
+$leakOut = ob_get_clean();
+check('cfg: no leak (invalid -> null, no output)', $leakResult === null && $leakOut === '');
+
+// I) Ścieżka secure_config jest poza web-rootem i nie odwołuje się do private_html/public_html.
+$securePath = panelia_secure_config_path();
+check('cfg: secure path uses secure_config, not private_html/public_html',
+    strpos($securePath, 'secure_config') !== false
+    && strpos($securePath, 'private_html') === false
+    && strpos($securePath, 'public_html') === false);
+
+// Sprzątanie.
+@unlink($secureFile);
+@unlink($webFile);
+@unlink($notArray);
+@unlink($emptyTok);
+@unlink($emptyUrl);
+@unlink($leaky);
+if (!empty($linkOk)) {
+    @unlink($tmpBase . '/private_html');
+}
+@rmdir($pub);
+@rmdir($secure);
+@rmdir($tmpBase);
 
 echo "\n";
 echo "Wynik: " . ($tests - $failed) . "/$tests OK\n";
