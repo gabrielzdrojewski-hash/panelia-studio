@@ -3,9 +3,9 @@
 // ani case study Ustronie Morskie. Klasyfikacja: mediaType = "editorial_generated_concept".
 // Publiczna etykieta (gdy grozi pomyłka z realizacją): "Wizualizacja koncepcyjna".
 //
-// ODRZUCONE (NIE rejestrować, NIE generować wariantów, NIE używać na stronie):
+// APPROVED EDITORIAL SET:
 //   public/media/editorial/panelia-concepts/panelia-premium/panelia-premium-02-soft-contemporary/
-//   (paczka panelia-premium-02-soft-contemporary — jakość odrzucona)
+//   Panelia Premium 02 - Soft Contemporary: approved complete concept, 10 frames.
 
 const BASE = '/media/editorial/panelia-concepts';
 const VARIANTS = [480, 960, 1600] as const;
@@ -29,9 +29,10 @@ export interface EditorialMedia {
   publicLabel: 'Wizualizacja koncepcyjna';
   allowedPlacements: string[];
   focalPoint: string;
-  preferredAspectRatio: string; // "16/9" | "4/3"
+  preferredAspectRatio: string; // CSS aspect-ratio, e.g. "16/9", "4/3", "1200/1291"
   darkOverlayRecommended: boolean;
   qualityStatus: QualityStatus;
+  variantWidths?: readonly number[]; // defaults to VARIANTS
   category?: string; // kategoria tematyczna (paczka category-visuals): hero, projekt-funkcjonalny, ...
   isSchematic?: boolean; // grafika schematyczna/koncepcyjna (nie fotorealistyczne wnętrze)
   // Powiązania mieszkań (opcjonalne — dla zestawów pomieszczeń):
@@ -140,7 +141,7 @@ const concepts: EditorialMedia[] = [
 ];
 
 // ————————————————————— ZESTAWY MIESZKAŃ (koncepcyjne, per pakiet) —————————————————————
-// Tylko ZATWIERDZONE zestawy. Paczka panelia-premium-02-soft-contemporary jest ODRZUCONA — nie ma jej tu.
+// Approved apartment sets only. Panelia Premium 02 - Soft Contemporary is approved.
 const roomLabels: Record<string, string> = {
   'salon-z-aneksem': 'salon z aneksem kuchennym',
   lazienka: 'łazienka',
@@ -153,6 +154,11 @@ const roomLabels: Record<string, string> = {
   'gabinet-home-office': 'gabinet / home office',
   garderoba: 'garderoba',
   'kuchnia-z-jadalnia': 'kuchnia z jadalnią',
+  jadalnia: 'jadalnia',
+  kuchnia: 'kuchnia',
+  gabinet: 'gabinet',
+  'hol-przedpokoj': 'hol / przedpok\u00f3j',
+  balkon: 'balkon',
 };
 
 interface ApartmentSpec {
@@ -161,7 +167,14 @@ interface ApartmentSpec {
   dir: string;
   ratio: string;
   style: string;
-  rooms: { file: string; room: string }[];
+  rooms: {
+    file: string;
+    room: string;
+    ratio?: string;
+    width?: number;
+    height?: number;
+    variantWidths?: readonly number[];
+  }[];
 }
 
 const apartmentSpecs: ApartmentSpec[] = [
@@ -232,6 +245,25 @@ const apartmentSpecs: ApartmentSpec[] = [
       { file: 'panelia-signature-01-gabinet-home-office', room: 'gabinet-home-office' },
     ],
   },
+  {
+    package: 'panelia_finish_premium',
+    apartmentId: 'panelia-premium-02-soft-contemporary',
+    dir: 'panelia-premium/panelia-premium-02-soft-contemporary',
+    ratio: '1200/1291',
+    style: 'soft contemporary',
+    rooms: [
+      { file: 'panelia-premium-02-01-salon-z-aneksem', room: 'salon-z-aneksem', ratio: '1200/1291', width: 1200, height: 1291, variantWidths: [480, 960, 1200] },
+      { file: 'panelia-premium-02-02-jadalnia', room: 'jadalnia', ratio: '1200/1296', width: 1200, height: 1296, variantWidths: [480, 960, 1200] },
+      { file: 'panelia-premium-02-03-kuchnia', room: 'kuchnia', ratio: '1200/1305', width: 1200, height: 1305, variantWidths: [480, 960, 1200] },
+      { file: 'panelia-premium-02-04-sypialnia-master', room: 'sypialnia-master', ratio: '1200/1291', width: 1200, height: 1291, variantWidths: [480, 960, 1200] },
+      { file: 'panelia-premium-02-05-lazienka-master', room: 'lazienka-master', ratio: '1200/1291', width: 1200, height: 1291, variantWidths: [480, 960, 1200] },
+      { file: 'panelia-premium-02-06-garderoba', room: 'garderoba', ratio: '1200/1316', width: 1200, height: 1316, variantWidths: [480, 960, 1200] },
+      { file: 'panelia-premium-02-07-gabinet', room: 'gabinet', ratio: '1200/1321', width: 1200, height: 1321, variantWidths: [480, 960, 1200] },
+      { file: 'panelia-premium-02-08-hol-przedpokoj', room: 'hol-przedpokoj', ratio: '1200/1330', width: 1200, height: 1330, variantWidths: [480, 960, 1200] },
+      { file: 'panelia-premium-02-09-lazienka-dodatkowa', room: 'lazienka-dodatkowa', ratio: '1200/1316', width: 1200, height: 1316, variantWidths: [480, 960, 1200] },
+      { file: 'panelia-premium-02-10-balkon', room: 'balkon', ratio: '1200/1316', width: 1200, height: 1316, variantWidths: [480, 960, 1200] },
+    ],
+  },
 ];
 
 const apartments: EditorialMedia[] = apartmentSpecs.flatMap((spec) =>
@@ -242,7 +274,9 @@ const apartments: EditorialMedia[] = apartmentSpecs.flatMap((spec) =>
       style: spec.style,
       usage: 'wizualizacje / mieszkanie koncepcyjne',
       allowedPlacements: ['wizualizacje'],
-      preferredAspectRatio: spec.ratio,
+      preferredAspectRatio: r.ratio ?? spec.ratio,
+      ...(r.width && r.height ? { width: r.width, height: r.height } : {}),
+      ...(r.variantWidths ? { variantWidths: r.variantWidths } : {}),
       qualityStatus: 'approved',
       package: spec.package,
       apartmentId: spec.apartmentId,
@@ -311,7 +345,8 @@ export function getEditorial(id: string): EditorialMedia | undefined {
 // srcset dla wariantów 480/960/1600 WebP (uwzględnia podkatalog).
 export function editorialSrcset(m: EditorialMedia): string {
   const prefix = `${BASE}/${m.dir ? m.dir + '/' : ''}${m.file}`;
-  return VARIANTS.map((w) => `${prefix}-${w}.webp ${w}w`).join(', ');
+  const widths = m.variantWidths ?? VARIANTS;
+  return widths.map((w) => `${prefix}-${w}.webp ${w}w`).join(', ');
 }
 
 // Zestawy mieszkań (zatwierdzone) do prezentacji na /wizualizacje — pogrupowane.
@@ -329,6 +364,7 @@ const apartmentTitles: Record<string, string> = {
   'panelia-comfort-01-cieple-greige-mieszkanie': 'Mieszkanie w ciepłym greige',
   'panelia-comfort-02-soft-japandi-mieszkanie': 'Mieszkanie soft japandi',
   'panelia-signature-01-elegancki-apartament': 'Elegancki apartament',
+  'panelia-premium-02-soft-contemporary': 'Soft Contemporary',
 };
 
 export function apartmentGroups(pkg: string): ApartmentGroup[] {
