@@ -4,9 +4,9 @@ Operacyjny opis bezpiecznego tworzenia leadów z formularza kontaktowego `paneli
 w Fatica ERP. **Jedno źródło prawdy** dla integracji kontaktowej (`docs/FATICA_INTEGRATION.md`
 odsyła tutaj). Repozytorium **nie zawiera** tokenów ani sekretów.
 
-> Stan: **READY FOR LOCAL PANELIA E2E** po finalizacji kontraktu ERP w commicie `5d3d49c`.
-> Formularz pozostaje domyślnie wyłączony (`PUBLIC_CONTACT_FORM_ENABLED=false`) —
-> produkcja nadal pokazuje kontakt bezpośredni.
+> Stan: **PRODUKCYJNY FORMULARZ WŁĄCZONY** po udanym teście E2E z Fatica ERP (ok = true).
+> Formularz jest domyślnie WŁĄCZONY; kill switch to rebuild z `PUBLIC_CONTACT_FORM_ENABLED=false`
+> (powrót do kontaktu bezpośredniego bez zmian w kodzie).
 
 ## 1. Diagram przepływu i role
 

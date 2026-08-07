@@ -1,13 +1,14 @@
 ---
 // Feature flag: PUBLIC_CONTACT_FORM_ENABLED (build-time).
-//   false — kontakt bezpośredni (produkcyjnie bezpieczny, domyślny).
-//   true  — formularz online (gateway /api/contact → Fatica ERP) + telefon/e-mail jako alternatywa.
-// Komponent ContactForm.astro renderujemy WYŁĄCZNIE gdy flaga = true.
+//   Po udanym teście E2E z Fatica ERP formularz online jest DOMYŚLNIE WŁĄCZONY.
+//   Wyłącznik awaryjny (kill switch): rebuild z PUBLIC_CONTACT_FORM_ENABLED=false
+//   przywraca kontakt bezpośredni (telefon/e-mail) bez zmian w kodzie.
+//   Architektura bez zmian: browser → /api/contact (gateway) → secure_config → Fatica ERP.
 import BaseLayout from '../layouts/BaseLayout.astro';
 import ContactForm from '../components/ContactForm.astro';
 import { contact } from '../data/site';
 
-const contactFormEnabled = import.meta.env.PUBLIC_CONTACT_FORM_ENABLED === 'true';
+const contactFormEnabled = import.meta.env.PUBLIC_CONTACT_FORM_ENABLED !== 'false';
 ---
 
 <BaseLayout

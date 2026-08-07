@@ -25,7 +25,7 @@ tym samym hoście (Astro pozostaje static, bez adaptera Node/SSR).
   Klient nie zna adresu ERP ani tokenu. Tryb demo został usunięty.
 - **Warstwa serwerowa (gateway):** `public/api/contact.php` → po buildzie `dist/api/contact.php`.
   Waliduje niezależnie, dodaje token (Bearer) po stronie serwera i wywołuje ERP.
-- **Feature flag:** `PUBLIC_CONTACT_FORM_ENABLED` (build-time). Domyślnie `false` → kontakt bezpośredni.
+- **Feature flag:** `PUBLIC_CONTACT_FORM_ENABLED` (build-time). Po teście E2E DOMYŚLNIE WŁĄCZONY (formularz online). Kill switch: rebuild z `=false` → kontakt bezpośredni.
 
 ### Przepływ
 
