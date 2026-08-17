@@ -151,7 +151,7 @@ import { contact } from '../../data/site';
 
 <script>
   import { estimateDefinition, inferPackageInterest } from '../../data/estimate/definition';
-  import { submitEstimate } from '../../lib/estimate';
+  import { submitEstimate, buildFallbackBrief } from '../../lib/estimate';
   import type {
     EstimateAnswers,
     EstimateQuestion,
@@ -564,30 +564,11 @@ import { contact } from '../../data/site';
       return true;
     };
 
-    // ——— Serializacja briefu (czytelny, do leada manual-quote) ———
-    const labelFor = (qid: string, value: string): string => {
-      for (const s of def.steps) for (const q of s.questions) if (q.id === qid) {
-        const o = q.options?.find((x) => x.value === value);
-        return o ? o.label : value;
-      }
-      return value;
-    };
-    const buildBrief = (): string => {
-      const lines: string[] = ['Zgłoszenie z konfiguratora „Wyceń swoje wnętrze".', ''];
-      for (const s of def.steps) {
-        for (const q of visibleQuestions(s)) {
-          const v = answers[q.id];
-          if (v == null || v === '' || (Array.isArray(v) && v.length === 0)) continue;
-          let text: string;
-          if (Array.isArray(v)) text = v.map((x) => labelFor(q.id, x)).join(', ');
-          else if (q.type === 'single') text = labelFor(q.id, String(v));
-          else text = String(v) + (q.unit ? ` ${q.unit}` : '');
-          lines.push(`• ${q.label}: ${text}`);
-        }
-      }
-      lines.push('', `Sesja: ${sessionId}`, `Wersja formularza: ${def.version}`);
-      return lines.join('\n').slice(0, 4900);
-    };
+    // ——— Fallback brief (współdzielona, testowana implementacja z src/lib/estimate.ts) ———
+    // To NIE jest strukturalny payload answers — pełne, strukturalne answers + form_version + provenance
+    // dostarcza dopiero docelowy endpoint estymacji ERP (patrz raport, ERP GAP).
+    const buildBrief = (): string =>
+      buildFallbackBrief(def, answers, { session_id: sessionId, form_version: def.version }).text;
 
     // ——— Stany UI ———
     const stateView = (title: string, note?: string, spinner = false): HTMLElement =>

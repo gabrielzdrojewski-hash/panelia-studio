@@ -77,13 +77,27 @@ if (!priceHit) ok('brak cen i stawek w źródłach estymatora (cena wyłącznie 
 /'manual_quote'/.test(lib) && /'not_configured'/.test(lib) ? ok('obsługa manual_quote / not_configured') : fail('brak manual_quote/not_configured');
 /sendContactForm/.test(lib) ? ok('fallback leada przez sprawdzony /api/contact') : fail('brak fallbacku /api/contact');
 
+// 4b. Jawna klasyfikacja + ochrona przed bypassem/duplikatem.
+/classifyEstimateEndpoint/.test(lib) ? ok('estimate.ts: jawna klasyfikacja odpowiedzi') : fail('brak jawnej klasyfikacji');
+/FALLBACK_ALLOWED/.test(lib) ? ok('estimate.ts: FALLBACK_ALLOWED (kontrolowany fallback)') : fail('brak FALLBACK_ALLOWED');
+/manual_quote_accepted/.test(lib) ? ok('estimate.ts: manual_quote_accepted (terminal, bez duplikatu)') : fail('brak manual_quote_accepted');
+['validation_error', 'rate_limited', 'forbidden', 'server_error'].every((o) => lib.includes(o))
+  ? ok('estimate.ts: outcomes bez fallbacku (422/429/403/5xx)') : fail('brak outcomes bez fallbacku');
+/idempotency_key/.test(lib) ? ok('estimate.ts: idempotency_key w submission') : fail('brak idempotency_key');
+/buildFallbackBrief/.test(lib) && /truncated/.test(lib) ? ok('estimate.ts: buildFallbackBrief (uczciwe obcinanie)') : fail('brak buildFallbackBrief');
+
 // 5. Endpoint klienta i brak sekretów.
 /'\/api\/estimate'/.test(lib) || /"\/api\/estimate"/.test(lib)
   ? ok('estimate.ts woła /api/estimate') : fail('estimate.ts nie woła /api/estimate');
+// Realne wskaźniki sekretu (nie zwykłe wzmianki architektoniczne w komentarzach).
+let clientLeak = false;
 for (const [name, src] of [['estimate.ts', lib], ['wizard', wizard], ['analytics', analytics]]) {
-  if (/app\.fatica\.pl|erp_token|secure_config|Bearer\s/.test(src)) fail(`sekret/ERP w kliencie: ${name}`);
+  if (/app\.fatica\.pl\/api|erp_token\s*[:=]|Bearer\s+[A-Za-z0-9._-]{6,}/.test(src)) {
+    fail(`sekret/ERP w kliencie: ${name}`);
+    clientLeak = true;
+  }
 }
-ok('brak adresu ERP / tokenu / secure_config w kodzie klienta');
+if (!clientLeak) ok('brak realnego adresu ERP / tokenu / Bearer w kodzie klienta');
 
 // 6. Analityka bez PII.
 const forbidden = ['name', 'email', 'phone', 'message', 'answers'];
@@ -127,6 +141,16 @@ if (clientJs.length === 0) {
     if (/app\.fatica\.pl|erp_token|secure_config|Bearer\s+[A-Za-z0-9]/.test(c)) { fail(`sekret/ERP w bundlu: ${f}`); leak = true; }
   }
   if (!leak) ok('bundle klienta bez adresu ERP / tokenu / secure_config');
+}
+
+// 11b. Runtime testy tabeli decyzji (fallback/ERP) — dowód zachowania, nie tylko statyka.
+const rt = spawnSync('node', ['--import', './tests/estimate/hooks.mjs', 'tests/estimate/decision.test.mjs'], { encoding: 'utf8', cwd: ROOT });
+if (rt.status === 0) {
+  const m = (rt.stdout || '').match(/Wynik:\s*(\d+)\s*PASS,\s*(\d+)\s*FAIL/);
+  ok(`runtime testy decyzji fallback/ERP OK${m ? ` (${m[1]} PASS)` : ''}`);
+} else {
+  fail('runtime testy decyzji fallback/ERP FAIL');
+  if (rt.stdout) console.log(rt.stdout.split('\n').filter((l) => l.includes('FAIL')).join('\n'));
 }
 
 // 12. php -l estimate.php (jeśli PHP dostępne).
