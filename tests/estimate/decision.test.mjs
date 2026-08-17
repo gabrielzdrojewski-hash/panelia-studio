@@ -154,6 +154,20 @@ async function run() {
   const brief2 = buildFallbackBrief(estimateDefinition, hiddenAnswers, { session_id: 'sid', form_version: 'v' });
   check('brief → pomija odpowiedź na pytanie ukryte warunkowo (rooms_selected)', !brief2.included_question_ids.includes('rooms_selected'));
 
+  // 13b. buildFallbackBrief — zawiera inspiracje (etykiety, nie surowe id)
+  const inspAnswers = { path: 'projekt_wnetrza', property_type: 'mieszkanie', inspiration_ids: ['jasne-otwarte', 'ciemne-eleganckie'] };
+  const brief4 = buildFallbackBrief(estimateDefinition, inspAnswers, { session_id: 'sid', form_version: 'v' });
+  check('brief → zawiera wybrane inspiracje', brief4.included_question_ids.includes('inspiration_ids'));
+  check('brief → inspiracje jako etykiety', brief4.text.includes('Jasne i otwarte') && brief4.text.includes('Ciemne i eleganckie'));
+
+  // 13c. definicja ma krok inspiracji z opcjami media + „nie wiem", bez mapowania na pakiet
+  const inspStep = estimateDefinition.steps.find((s) => s.id === 'inspiration');
+  const inspQ = inspStep && inspStep.questions[0];
+  check('definicja: krok inspiracji istnieje', !!inspStep);
+  check('definicja: typ inspiration + maxSelect', inspQ && inspQ.type === 'inspiration' && inspQ.maxSelect === 3);
+  check('definicja: opcje inspiracji mają mediaId', !!inspQ && inspQ.options.some((o) => o.mediaId));
+  check('definicja: opcja „nie wiem" bez mediaId', !!inspQ && inspQ.options.some((o) => o.value === 'nie_wiem' && !o.mediaId));
+
   // 14. buildFallbackBrief — przy przekroczeniu limitu NIE obcina po cichu
   const bigAnswers = { path: 'projekt_wnetrza', property_type: 'mieszkanie', notes: 'x'.repeat(500), city: 'Warszawa' };
   const brief3 = buildFallbackBrief(estimateDefinition, bigAnswers, { session_id: 'sid', form_version: 'v' }, 120);

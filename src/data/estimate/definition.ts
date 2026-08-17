@@ -8,9 +8,10 @@
 // Budżet jest jakościowy (bez kwot). Cena pochodzi wyłącznie z ERP.
 
 import type { EstimateDefinition, PackageInterest } from '../../lib/estimate';
+import { inspirationQuestionOptions } from './inspirations';
 
 export const estimateDefinition: EstimateDefinition = {
-  version: '2026-08-01',
+  version: '2026-08-18', // bump: dodano krok inspiracji + review (zmiana schematu draftu)
   source: 'panelia_fallback',
   steps: [
     {
@@ -186,6 +187,21 @@ export const estimateDefinition: EstimateDefinition = {
             { value: 'premium', label: 'Premium' },
             { value: 'bez_ograniczen', label: 'Bez sztywnych ograniczeń' },
           ],
+        },
+      ],
+    },
+    {
+      id: 'inspiration',
+      title: 'Co Ci się podoba?',
+      intro: 'Wybierz do trzech kierunków, które są Ci najbliższe. To pomaga nam trafić w Twój gust — nie jest wyborem pakietu.',
+      questions: [
+        {
+          id: 'inspiration_ids',
+          type: 'inspiration',
+          label: 'Jaki klimat wnętrza jest Ci najbliższy?',
+          help: 'Możesz zaznaczyć maksymalnie 3.',
+          maxSelect: 3,
+          options: inspirationQuestionOptions,
         },
       ],
     },

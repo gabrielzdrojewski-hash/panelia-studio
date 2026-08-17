@@ -12,9 +12,14 @@ export type EstimateEvent =
   | 'estimate_cta_clicked'
   | 'estimate_started'
   | 'estimate_step_completed'
+  | 'estimate_inspiration_reached'
+  | 'estimate_inspiration_selected'
+  | 'estimate_review_reached'
+  | 'estimate_review_edit_clicked'
   | 'estimate_contact_reached'
   | 'estimate_submitted'
   | 'estimate_calculated'
+  | 'estimate_manual_quote'
   | 'estimate_requires_manual_quote'
   | 'estimate_failed';
 
@@ -24,6 +29,7 @@ export interface AnalyticsPayload {
   step_id?: string;
   step_index?: number;
   step_count?: number;
+  selected_count?: number;
   form_version?: string;
   result_type?: string;
   // Nigdy nie umieszczać tutaj PII ani treści odpowiedzi.

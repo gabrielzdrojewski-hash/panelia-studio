@@ -114,8 +114,22 @@ forbidden.every((k) => analytics.includes(`'${k}'`))
 /prefers-reduced-motion/.test(wizard) ? ok('wizard: prefers-reduced-motion') : fail('wizard: brak reduced-motion');
 /AbortController/.test(wizard) ? ok('wizard: timeout klienta (AbortController)') : fail('wizard: brak timeoutu');
 
+// 7b. Wyceń 2.1 — inspiracje + review (na istniejących mediach, bez cen, bez mapowania pakietu).
+const insp = read('src/data/estimate/inspirations.ts') ?? '';
+/mediaId/.test(insp) ? ok('inspirations: oparte na istniejących mediach (mediaId)') : fail('inspirations: brak mediaId');
+/panelia_(concept|complete|signature|finish)/.test(insp)
+  ? fail('inspirations: wykryto mapowanie inspiracja→pakiet (zabronione)')
+  : ok('inspirations: brak mapowania inspiracja→pakiet');
+/'inspiration'/.test(def) && /inspiration_ids/.test(def) ? ok('definicja: krok inspiracji (inspiration_ids)') : fail('definicja: brak kroku inspiracji');
+/getEditorial|editorialSrcset/.test(wizard) ? ok('wizard: responsywne obrazy inspiracji (srcset)') : fail('wizard: brak srcset dla inspiracji');
+/renderReview/.test(wizard) && /editStep/.test(wizard) ? ok('wizard: review + edycja z podsumowania') : fail('wizard: brak review/edit');
+/aria-pressed/.test(wizard) ? ok('wizard: karty inspiracji dostępne (aria-pressed)') : fail('wizard: karty inspiracji bez aria-pressed');
+/(Wgraj plik|prześlij plik|coming soon|wkrótce\s+(dostępn|udostępn)|<input[^>]*type=["']?file)/i.test(wizard)
+  ? fail('wizard: atrapa upload / martwe UII (zabronione)')
+  : ok('wizard: brak martwego UI upload (upload dopiero po wdrożeniu ERP)');
+
 // 8. Analytics hooki (semantyczne zdarzenia).
-const events = ['estimate_started', 'estimate_step_completed', 'estimate_contact_reached', 'estimate_submitted', 'estimate_requires_manual_quote', 'estimate_failed'];
+const events = ['estimate_started', 'estimate_step_completed', 'estimate_inspiration_reached', 'estimate_inspiration_selected', 'estimate_review_reached', 'estimate_review_edit_clicked', 'estimate_contact_reached', 'estimate_submitted', 'estimate_manual_quote', 'estimate_failed'];
 events.every((e) => wizard.includes(e))
   ? ok('wizard: komplet semantycznych zdarzeń analitycznych')
   : warn('wizard: część zdarzeń analitycznych może brakować');

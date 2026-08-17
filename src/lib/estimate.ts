@@ -15,12 +15,13 @@ export type { PackageInterest } from './contact';
 
 // ————————————————————————————— MODEL FORMULARZA (data-driven) —————————————————————————————
 
-export type QuestionType = 'single' | 'multi' | 'number' | 'text' | 'textarea';
+export type QuestionType = 'single' | 'multi' | 'number' | 'text' | 'textarea' | 'inspiration';
 
 export interface EstimateOption {
   value: string;
   label: string;
   hint?: string;
+  mediaId?: string; // id materiału z editorialMedia (dla kart inspiracji); brak = opcja bez obrazu
 }
 
 export interface VisibilityRule {
@@ -40,6 +41,7 @@ export interface EstimateQuestion {
   min?: number;
   max?: number;
   maxLength?: number;
+  maxSelect?: number; // dla type 'inspiration'/'multi' — maksymalna liczba wyborów
   autocomplete?: string;
   inputmode?: string;
   visibleWhen?: VisibilityRule;
