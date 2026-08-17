@@ -9,6 +9,7 @@
     "preview": "astro preview",
     "check": "astro check",
     "check:contact": "node scripts/check-contact-integration.mjs",
+    "check:estimate": "node scripts/check-estimate.mjs",
     "e2e:serve": "php -S 127.0.0.1:4322 -t dist scripts/php-router.php"
   },
   "dependencies": {

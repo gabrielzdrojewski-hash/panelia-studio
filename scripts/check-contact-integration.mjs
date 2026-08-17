@@ -177,9 +177,9 @@ const distHtml = walk('dist', '.html');
 if (distHtml.length === 0) {
   warn('brak dist — pomijam liczbę stron i kopię contact.php');
 } else {
-  distHtml.length === 11
-    ? ok(`dist: 11 stron (${distHtml.length})`)
-    : warn(`dist: liczba stron = ${distHtml.length} (oczekiwano 11)`);
+  distHtml.length === 12
+    ? ok(`dist: 12 stron (${distHtml.length})`)
+    : warn(`dist: liczba stron = ${distHtml.length} (oczekiwano 12)`);
   existsSync(join(ROOT, 'dist/api/contact.php'))
     ? ok('dist/api/contact.php istnieje (build kopiuje endpoint)')
     : fail('dist/api/contact.php brak — build nie skopiował endpointu');

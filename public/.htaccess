@@ -24,6 +24,10 @@ ErrorDocument 404 /404.html
   # nie koliduje z /kontakt ani z ErrorDocument.
   RewriteRule ^api/contact/?$ api/contact.php [L]
 
+  # --- 2c. Endpoint wyceny (wewnętrzny rewrite do PHP adaptera) ---
+  # POST /api/estimate -> api/estimate.php. Bez R=301/302 (zachowuje POST), bez pętli.
+  RewriteRule ^api/estimate/?$ api/estimate.php [L]
+
   # --- 3. Przekierowania 301 starych adresów WordPress ---
   # Query string jest zachowywany domyślnie przez Apache.
   RewriteRule ^home-2-2/?$     /            [L,R=301]
@@ -60,7 +64,7 @@ ErrorDocument 404 /404.html
 
 # --- Endpoint kontaktowy: nigdy nie cache'uj (dodatkowo do nagłówków z PHP) ---
 <IfModule mod_headers.c>
-  <FilesMatch "^contact\.php$">
+  <FilesMatch "^(contact|estimate)\.php$">
     Header set Cache-Control "no-store, no-cache, must-revalidate"
   </FilesMatch>
 </IfModule>

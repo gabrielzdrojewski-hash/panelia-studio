@@ -7,6 +7,7 @@ import { projects } from '../data/projects';
 // (pomijamy 404 oraz politykę prywatności oznaczoną jako noindex).
 const routes = [
   { path: '/', priority: '1.0', changefreq: 'monthly' },
+  { path: '/wycena', priority: '0.9', changefreq: 'monthly' },
   { path: '/o-nas', priority: '0.7', changefreq: 'yearly' },
   { path: '/oferta', priority: '0.8', changefreq: 'monthly' },
   { path: '/pakiety', priority: '0.8', changefreq: 'monthly' },

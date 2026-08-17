@@ -1,0 +1,764 @@
+---
+// Guided estimate wizard — renderowany data-driven z definicji formularza.
+// Marketingowa treść SEO żyje w HTML strony /wycena; ten komponent to interaktywna warstwa.
+import { contact } from '../../data/site';
+---
+
+<section class="wiz" aria-label="Konfigurator wstępnej wyceny">
+  <noscript>
+    <div class="wiz-noscript">
+      <p>
+        Konfigurator wymaga włączonego JavaScriptu. Możesz też po prostu
+        <a href="/kontakt">napisać do nas</a> lub zadzwonić:
+        <a href={`tel:${contact.phoneHref}`}>{contact.phone}</a> — dobierzemy rozwiązanie wspólnie.
+      </p>
+    </div>
+  </noscript>
+
+  <div class="wiz-app" data-wiz-app data-phone={contact.phone} data-phone-href={contact.phoneHref} data-email={contact.email}>
+    <!-- Wypełniane przez skrypt. Do czasu hydratacji pokazujemy neutralny placeholder. -->
+    <div class="wiz-boot" data-wiz-boot>
+      <span class="wiz-boot-spinner" aria-hidden="true"></span>
+      <p>Przygotowujemy konfigurator…</p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .wiz { --wiz-max: 760px; }
+  .wiz-noscript {
+    max-width: var(--wiz-max);
+    margin: 0 auto;
+    padding: clamp(20px, 3vw, 30px);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+  }
+  .wiz-app { max-width: var(--wiz-max); margin: 0 auto; }
+
+  .wiz-boot { text-align: center; padding: clamp(40px, 8vw, 90px) 0; color: var(--muted); }
+  .wiz-boot-spinner {
+    display: inline-block; width: 30px; height: 30px; margin-bottom: 14px;
+    border: 2px solid var(--line-strong); border-top-color: var(--accent-deep);
+    border-radius: 50%; animation: wiz-spin 0.9s linear infinite;
+  }
+  @keyframes wiz-spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .wiz-boot-spinner { animation-duration: 2.4s; } }
+
+  /* ——— Progres ——— */
+  .wiz-progress { margin-bottom: clamp(22px, 3vw, 34px); }
+  .wiz-progress-meta {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 0.74rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent-deep); font-weight: 700; margin-bottom: 10px;
+  }
+  .wiz-progress-bar { height: 4px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  .wiz-progress-fill {
+    height: 100%; background: var(--gold); border-radius: 999px;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  @media (prefers-reduced-motion: reduce) { .wiz-progress-fill { transition: none; } }
+
+  /* ——— Krok ——— */
+  .wiz-step-title { font-size: clamp(1.7rem, 3.4vw, 2.6rem); margin: 0 0 0.5rem; }
+  .wiz-step-intro { color: var(--ink-90); margin: 0 0 clamp(20px, 3vw, 30px); max-width: 52ch; }
+  .wiz-field { margin-bottom: clamp(20px, 2.6vw, 30px); }
+  .wiz-field > legend,
+  .wiz-field > .wiz-label {
+    font-size: 1.05rem; font-weight: 700; color: var(--ink);
+    margin-bottom: 12px; padding: 0; display: block; letter-spacing: -0.01em;
+  }
+  .wiz-help { font-size: 0.9rem; color: var(--muted); margin: -6px 0 12px; }
+  fieldset.wiz-field { border: 0; margin: 0 0 clamp(20px, 2.6vw, 30px); padding: 0; }
+
+  /* Opcje single/multi jako karty */
+  .wiz-options { display: grid; gap: 10px; }
+  .wiz-options.cols-2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 560px) { .wiz-options.cols-2 { grid-template-columns: 1fr; } }
+  .wiz-option {
+    display: flex; align-items: flex-start; gap: 13px;
+    padding: clamp(15px, 2vw, 19px) clamp(16px, 2vw, 20px);
+    border: 1.5px solid var(--line-strong); border-radius: var(--radius);
+    background: var(--surface); cursor: pointer;
+    transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+    min-height: 56px;
+  }
+  .wiz-option:hover { border-color: var(--gold); }
+  .wiz-option:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); border-color: var(--accent-deep); }
+  .wiz-option input { margin-top: 3px; width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--accent-deep); }
+  .wiz-option-body { display: flex; flex-direction: column; gap: 3px; }
+  .wiz-option-label { font-weight: 600; color: var(--ink); }
+  .wiz-option-hint { font-size: 0.86rem; color: var(--muted); }
+  .wiz-option[data-checked] { border-color: var(--accent-deep); background: color-mix(in srgb, var(--gold) 8%, var(--surface)); }
+
+  /* Inputy */
+  .wiz-input, .wiz-textarea {
+    width: 100%; font-family: var(--font-body); font-size: 1.05rem; color: var(--ink);
+    background: var(--surface-2, #fff); border: 1px solid var(--line-strong);
+    border-radius: var(--radius); padding: 0.95em 1.1em;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .wiz-textarea { resize: vertical; min-height: 120px; }
+  .wiz-input:focus, .wiz-textarea:focus {
+    outline: none; border-color: var(--accent-deep);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  .wiz-input[aria-invalid='true'], .wiz-textarea[aria-invalid='true'] { border-color: #b4482f; }
+  .wiz-input-unit { position: relative; }
+  .wiz-input-unit .wiz-unit {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--muted); font-size: 0.95rem; pointer-events: none;
+  }
+  .wiz-field-error { margin: 8px 0 0; font-size: 0.86rem; color: #b4482f; font-weight: 500; }
+  .wiz-field-error[hidden] { display: none; }
+
+  /* Nawigacja */
+  .wiz-nav { display: flex; justify-content: space-between; gap: 14px; margin-top: clamp(26px, 3vw, 38px); }
+  .wiz-nav-spacer { margin-left: auto; }
+
+  /* Error summary */
+  .wiz-errors {
+    border: 1px solid #d98a72; background: #fbeae5; color: #8f3419;
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 22px; font-size: 0.92rem;
+  }
+  .wiz-errors ul { margin: 8px 0 0; padding-left: 1.1rem; }
+  .wiz-errors a { color: #8f3419; text-decoration: underline; }
+  .wiz-errors[hidden] { display: none; }
+
+  /* Panel wyniku */
+  .wiz-result { text-align: left; }
+  .wiz-result-eyebrow { color: var(--accent-deep); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; font-size: 0.74rem; }
+  .wiz-result-title { font-size: clamp(1.8rem, 3.6vw, 2.8rem); margin: 0.5rem 0 1rem; }
+  .wiz-price { font-family: var(--font-display); font-weight: 800; font-size: clamp(2rem, 5vw, 3.2rem); color: var(--ink); letter-spacing: -0.02em; line-height: 1; }
+  .wiz-result-package { margin: 1rem 0; color: var(--ink-90); }
+  .wiz-next { margin: clamp(24px, 3vw, 34px) 0; padding: clamp(20px, 3vw, 28px); background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--line); }
+  .wiz-next h3 { font-size: 1.15rem; margin: 0 0 12px; }
+  .wiz-next ol { margin: 0; padding-left: 1.3rem; display: grid; gap: 8px; color: var(--ink-90); }
+  .wiz-result-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
+  .wiz-disclaimer { font-size: 0.82rem; color: var(--muted); margin-top: 18px; }
+
+  .wiz-state { text-align: center; padding: clamp(36px, 7vw, 80px) 0; }
+  .wiz-state .wiz-boot-spinner { margin-bottom: 16px; }
+  .wiz-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+  /* Honeypot */
+  .wiz-hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  .wiz-consent { display: flex; gap: 12px; align-items: flex-start; font-size: 0.92rem; color: var(--ink-90); line-height: 1.55; cursor: pointer; }
+  .wiz-consent input { width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px; accent-color: var(--accent-deep); }
+  .wiz-consent a { text-decoration: underline; text-underline-offset: 2px; }
+</style>
+
+<script>
+  import { estimateDefinition, inferPackageInterest } from '../../data/estimate/definition';
+  import { submitEstimate } from '../../lib/estimate';
+  import type {
+    EstimateAnswers,
+    EstimateQuestion,
+    EstimateStep,
+    EstimateResult,
+  } from '../../lib/estimate';
+  import { trackEstimate } from '../../lib/analytics';
+
+  const root = document.querySelector<HTMLElement>('[data-wiz-app]');
+  if (root) {
+    const def = estimateDefinition;
+    const DRAFT_KEY = `panelia_estimate_draft_${def.version}`;
+    const phone = root.dataset.phone ?? '';
+    const phoneHref = root.dataset.phoneHref ?? '';
+    const email = root.dataset.email ?? '';
+
+    // ——— Pomocnicze DOM ———
+    type Attrs = Record<string, unknown>;
+    const el = (tag: string, attrs: Attrs = {}, ...children: unknown[]): HTMLElement => {
+      const e = document.createElement(tag);
+      for (const [k, v] of Object.entries(attrs)) {
+        if (v == null || v === false) continue;
+        if (k === 'class') e.className = String(v);
+        else if (k === 'html') e.innerHTML = String(v);
+        else if (k.startsWith('on') && typeof v === 'function')
+          e.addEventListener(k.slice(2).toLowerCase(), v as EventListener);
+        else e.setAttribute(k, v === true ? '' : String(v));
+      }
+      for (const c of children.flat()) {
+        if (c == null || c === false) continue;
+        e.append(c instanceof Node ? c : document.createTextNode(String(c)));
+      }
+      return e;
+    };
+    const mount = (parent: HTMLElement, children: unknown[]): void => {
+      for (const c of children.flat()) {
+        if (c == null || c === false) continue;
+        parent.append(c instanceof Node ? c : document.createTextNode(String(c)));
+      }
+    };
+    const uuid = (): string => {
+      if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+      });
+    };
+
+    // ——— Stan ———
+    const startedAt = new Date().toISOString();
+    let sessionId = uuid();
+    let idempotencyKey = `panelia-contact-${uuid()}`;
+    let answers: EstimateAnswers = {};
+    let contactData = { name: '', email: '', phone: '', consent: false };
+    let stepIndex = 0;
+    let inContact = false;
+    let submitting = false;
+    let started = false;
+
+    // UTM first-touch (sessionStorage; bez cookies/trackerów).
+    const captureUtm = (): Record<string, string> => {
+      let stored: Record<string, string> = {};
+      try { stored = JSON.parse(sessionStorage.getItem('panelia_utm') || '{}'); } catch { stored = {}; }
+      const p = new URLSearchParams(location.search);
+      let changed = false;
+      for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']) {
+        const v = p.get(k)?.trim();
+        if (v && !stored[k]) { stored[k] = v.slice(0, 255); changed = true; }
+      }
+      if (changed) { try { sessionStorage.setItem('panelia_utm', JSON.stringify(stored)); } catch { /* noop */ } }
+      return stored;
+    };
+    const utm = captureUtm();
+
+    // ——— Widoczność (conditional logic) ———
+    const answerMatches = (rule: { questionId: string; in: string[] } | undefined): boolean => {
+      if (!rule) return true;
+      const val = answers[rule.questionId];
+      if (Array.isArray(val)) return val.some((v) => rule.in.includes(v));
+      return typeof val === 'string' && rule.in.includes(val);
+    };
+    const visibleQuestions = (step: EstimateStep): EstimateQuestion[] =>
+      step.questions.filter((q) => answerMatches(q.visibleWhen));
+    const visibleSteps = (): EstimateStep[] =>
+      def.steps.filter((s) => answerMatches(s.visibleWhen) && visibleQuestions(s).length > 0);
+
+    // Pytania sterujące widocznością innych (do warunkowego re-renderu kroku).
+    const controllers = new Set<string>();
+    for (const s of def.steps) {
+      if (s.visibleWhen) controllers.add(s.visibleWhen.questionId);
+      for (const q of s.questions) if (q.visibleWhen) controllers.add(q.visibleWhen.questionId);
+    }
+
+    // ——— Draft (resume) ———
+    const saveDraft = () => {
+      try {
+        localStorage.setItem(
+          DRAFT_KEY,
+          JSON.stringify({ v: def.version, sessionId, startedAt, answers, contactData, stepIndex, inContact }),
+        );
+      } catch { /* brak localStorage — kontynuuj bez draftu */ }
+    };
+    const clearDraft = () => { try { localStorage.removeItem(DRAFT_KEY); } catch { /* noop */ } };
+    const loadDraft = (): boolean => {
+      try {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (!raw) return false;
+        const d = JSON.parse(raw);
+        if (!d || d.v !== def.version) { clearDraft(); return false; } // zmiana wersji → odrzuć starą sesję
+        return Boolean(d.answers && Object.keys(d.answers).length);
+      } catch { return false; }
+    };
+    const applyDraft = () => {
+      try {
+        const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}');
+        answers = d.answers ?? {};
+        contactData = d.contactData ?? contactData;
+        sessionId = d.sessionId ?? sessionId;
+        stepIndex = typeof d.stepIndex === 'number' ? d.stepIndex : 0;
+        inContact = Boolean(d.inContact);
+      } catch { /* noop */ }
+    };
+
+    const analyticsBase = () => ({ path: location.pathname, form_version: def.version });
+    const markStarted = () => {
+      if (started) return;
+      started = true;
+      trackEstimate('estimate_started', analyticsBase());
+    };
+
+    // ——— Render pojedynczego pytania ———
+    const fieldError = (id: string) => el('p', { class: 'wiz-field-error', id: `err-${id}`, 'data-fielderr': id, hidden: true });
+
+    const renderQuestion = (q: EstimateQuestion): HTMLElement => {
+      if (q.type === 'single' || q.type === 'multi') {
+        const multi = q.type === 'multi';
+        const current = answers[q.id];
+        const opts = (q.options ?? []).map((opt) => {
+          const checked = multi
+            ? Array.isArray(current) && current.includes(opt.value)
+            : current === opt.value;
+          const input = el('input', {
+            type: multi ? 'checkbox' : 'radio',
+            name: q.id,
+            value: opt.value,
+            ...(checked ? { checked: true } : {}),
+            'aria-describedby': opt.hint ? `hint-${q.id}-${opt.value}` : undefined,
+            onchange: () => {
+              markStarted();
+              if (multi) {
+                const arr = Array.isArray(answers[q.id]) ? [...(answers[q.id] as string[])] : [];
+                const i = arr.indexOf(opt.value);
+                if (i >= 0) arr.splice(i, 1); else arr.push(opt.value);
+                answers[q.id] = arr;
+              } else {
+                answers[q.id] = opt.value;
+              }
+              saveDraft();
+              clearFieldError(q.id);
+              // Jeśli to pytanie steruje widocznością innych — przebuduj krok (conditional logic).
+              if (controllers.has(q.id)) { renderConfigStep(); return; }
+              // W przeciwnym razie zaktualizuj tylko wyróżnienie kart w tej grupie.
+              wrap.querySelectorAll('.wiz-option').forEach((n) => {
+                const inp = n.querySelector('input');
+                if (inp) n.toggleAttribute('data-checked', (inp as HTMLInputElement).checked);
+              });
+            },
+          });
+          const body = el('span', { class: 'wiz-option-body' },
+            el('span', { class: 'wiz-option-label' }, opt.label),
+            opt.hint ? el('span', { class: 'wiz-option-hint', id: `hint-${q.id}-${opt.value}` }, opt.hint) : null,
+          );
+          const label = el('label', { class: 'wiz-option', ...(checked ? { 'data-checked': '' } : {}) }, input, body);
+          return label;
+        });
+        const wrap = el('div', { class: `wiz-options${(q.options?.length ?? 0) > 3 || q.type === 'multi' ? ' cols-2' : ''}` }, ...opts);
+        return el('fieldset', { class: 'wiz-field', 'data-question': q.id },
+          el('legend', {}, q.label, q.required ? el('span', { 'aria-hidden': 'true' }, ' *') : null),
+          q.help ? el('p', { class: 'wiz-help', id: `hint-${q.id}` }, q.help) : null,
+          wrap,
+          fieldError(q.id),
+        );
+      }
+
+      // number / text / textarea
+      const common: Attrs = {
+        id: `q-${q.id}`,
+        name: q.id,
+        'aria-describedby': [q.help ? `hint-${q.id}` : '', `err-${q.id}`].filter(Boolean).join(' ') || undefined,
+        oninput: (e: Event) => {
+          markStarted();
+          const t = e.target as HTMLInputElement | HTMLTextAreaElement;
+          answers[q.id] = q.type === 'number'
+            ? (t.value === '' ? undefined : Number(t.value))
+            : t.value;
+          saveDraft();
+          clearFieldError(q.id);
+        },
+      };
+      const cur = answers[q.id];
+      let control: HTMLElement;
+      if (q.type === 'textarea') {
+        control = el('textarea', { class: 'wiz-textarea', rows: 5, maxlength: q.maxLength, placeholder: q.placeholder, ...common }, typeof cur === 'string' ? cur : '');
+      } else {
+        const input = el('input', {
+          class: 'wiz-input',
+          type: q.type === 'number' ? 'number' : 'text',
+          value: cur != null ? String(cur) : '',
+          placeholder: q.placeholder,
+          maxlength: q.maxLength,
+          min: q.min, max: q.max,
+          inputmode: q.inputmode,
+          autocomplete: q.autocomplete,
+          ...common,
+        });
+        control = q.unit
+          ? el('div', { class: 'wiz-input-unit' }, input, el('span', { class: 'wiz-unit' }, q.unit))
+          : input;
+      }
+      return el('div', { class: 'wiz-field', 'data-question': q.id },
+        el('label', { class: 'wiz-label', for: `q-${q.id}` }, q.label, q.required ? el('span', { 'aria-hidden': 'true' }, ' *') : null),
+        q.help ? el('p', { class: 'wiz-help', id: `hint-${q.id}` }, q.help) : null,
+        control,
+        fieldError(q.id),
+      );
+    };
+
+    const clearFieldError = (id: string) => {
+      const err = root.querySelector<HTMLElement>(`[data-fielderr="${id}"]`);
+      if (err) { err.hidden = true; err.textContent = ''; }
+      root.querySelector(`[data-question="${id}"] [aria-invalid]`)?.removeAttribute('aria-invalid');
+    };
+    const setFieldError = (id: string, msg: string) => {
+      const err = root.querySelector<HTMLElement>(`[data-fielderr="${id}"]`);
+      if (err) { err.textContent = msg; err.hidden = false; }
+      const field = root.querySelector(`[data-question="${id}"]`);
+      const focusable = field?.querySelector<HTMLElement>('input, textarea');
+      focusable?.setAttribute('aria-invalid', 'true');
+    };
+
+    // ——— Progres ———
+    const renderProgress = (): HTMLElement => {
+      const steps = visibleSteps();
+      const total = steps.length + 1; // + krok kontaktu
+      const currentNum = inContact ? total : Math.min(stepIndex + 1, steps.length);
+      const pct = Math.round((currentNum / total) * 100);
+      return el('div', { class: 'wiz-progress' },
+        el('div', { class: 'wiz-progress-meta' },
+          el('span', {}, `Krok ${currentNum} z ${total}`),
+          el('span', {}, `${pct}%`),
+        ),
+        el('div', { class: 'wiz-progress-bar' }, el('div', { class: 'wiz-progress-fill', style: `width:${pct}%` })),
+      );
+    };
+
+    const errorSummary = (): HTMLElement =>
+      el('div', { class: 'wiz-errors', role: 'alert', 'data-errors': '', hidden: true, tabindex: '-1' });
+
+    const focusHeading = () => {
+      const h = root.querySelector<HTMLElement>('[data-step-title]');
+      h?.focus();
+    };
+
+    // ——— Render kroku konfiguracji ———
+    const renderConfigStep = () => {
+      const steps = visibleSteps();
+      stepIndex = Math.max(0, Math.min(stepIndex, steps.length - 1));
+      const step = steps[stepIndex];
+      const form = el('form', { class: 'wiz-form', novalidate: true, 'data-step-form': step.id });
+      form.addEventListener('submit', (e) => { e.preventDefault(); goNext(); });
+
+      mount(form, [
+        renderProgress(),
+        errorSummary(),
+        el('h2', { class: 'wiz-step-title', tabindex: '-1', 'data-step-title': '' }, step.title),
+        step.intro ? el('p', { class: 'wiz-step-intro' }, step.intro) : null,
+        ...visibleQuestions(step).map(renderQuestion),
+        el('div', { class: 'wiz-nav' },
+          stepIndex > 0
+            ? el('button', { type: 'button', class: 'btn btn-ghost', onclick: goBack }, 'Wstecz')
+            : el('span', {}),
+          el('button', { type: 'submit', class: 'btn' }, 'Dalej'),
+        ),
+      ]);
+      swap(form);
+      focusHeading();
+    };
+
+    const validateStep = (): boolean => {
+      const steps = visibleSteps();
+      const step = steps[stepIndex];
+      const errs: { id: string; label: string; msg: string }[] = [];
+      for (const q of visibleQuestions(step)) {
+        if (!q.required) continue;
+        const v = answers[q.id];
+        const empty = v == null || v === '' || (Array.isArray(v) && v.length === 0);
+        if (empty) errs.push({ id: q.id, label: q.label, msg: 'To pole jest wymagane.' });
+      }
+      const box = root.querySelector<HTMLElement>('[data-errors]');
+      if (errs.length && box) {
+        box.innerHTML = '';
+        box.append(
+          el('strong', {}, 'Uzupełnij wymagane pola:'),
+          el('ul', {}, ...errs.map((e) =>
+            el('li', {}, el('a', { href: `#q-${e.id}`, onclick: (ev: Event) => { ev.preventDefault(); root.querySelector(`[data-question="${e.id}"] input, [data-question="${e.id}"] textarea`)?.scrollIntoView({ block: 'center' }); (root.querySelector(`[data-question="${e.id}"] input, [data-question="${e.id}"] textarea`) as HTMLElement)?.focus(); } }, e.label))),
+          ),
+        );
+        box.hidden = false;
+        errs.forEach((e) => setFieldError(e.id, e.msg));
+        box.focus();
+        return false;
+      }
+      if (box) box.hidden = true;
+      return true;
+    };
+
+    const goNext = () => {
+      if (!validateStep()) return;
+      const steps = visibleSteps();
+      trackEstimate('estimate_step_completed', { ...analyticsBase(), step_id: steps[stepIndex].id, step_index: stepIndex + 1, step_count: steps.length + 1 });
+      if (stepIndex < steps.length - 1) {
+        stepIndex += 1;
+        saveDraft();
+        renderConfigStep();
+      } else {
+        inContact = true;
+        saveDraft();
+        trackEstimate('estimate_contact_reached', analyticsBase());
+        renderContactStep();
+      }
+    };
+    const goBack = () => {
+      if (inContact) { inContact = false; saveDraft(); renderConfigStep(); return; }
+      if (stepIndex > 0) { stepIndex -= 1; saveDraft(); renderConfigStep(); }
+    };
+
+    // ——— Krok kontaktu ———
+    const renderContactStep = () => {
+      const form = el('form', { class: 'wiz-form', novalidate: true, 'data-contact-form-wiz': '' });
+      form.addEventListener('submit', (e) => { e.preventDefault(); doSubmit(); });
+
+      const field = (id: string, label: string, type: string, attrs: Attrs = {}, required = false) => {
+        const input = el('input', {
+          class: 'wiz-input', id: `c-${id}`, name: id, type,
+          value: (contactData as unknown as Record<string, string>)[id] ?? '',
+          'aria-describedby': `err-c-${id}`,
+          oninput: (e: Event) => { (contactData as unknown as Record<string, string>)[id] = (e.target as HTMLInputElement).value; saveDraft(); },
+          ...attrs,
+        });
+        return el('div', { class: 'wiz-field', 'data-question': `c-${id}` },
+          el('label', { class: 'wiz-label', for: `c-${id}` }, label, required ? el('span', { 'aria-hidden': 'true' }, ' *') : null),
+          input,
+          el('p', { class: 'wiz-field-error', id: `err-c-${id}`, 'data-fielderr': `c-${id}`, hidden: true }),
+        );
+      };
+
+      form.append(
+        renderProgress(),
+        errorSummary(),
+        el('h2', { class: 'wiz-step-title', tabindex: '-1', 'data-step-title': '' }, 'Twoja konfiguracja jest gotowa'),
+        el('p', { class: 'wiz-step-intro' }, 'Zostaw dane kontaktowe — przygotujemy wstępną wycenę i skontaktujemy się, aby omówić szczegóły.'),
+        field('name', 'Imię i nazwisko', 'text', { maxlength: 150, autocomplete: 'name' }, true),
+        field('phone', 'Telefon', 'tel', { maxlength: 40, autocomplete: 'tel', inputmode: 'tel' }, true),
+        field('email', 'E-mail', 'email', { maxlength: 254, autocomplete: 'email' }, true),
+        // Honeypot
+        el('div', { class: 'wiz-hp', 'aria-hidden': 'true' },
+          el('label', { for: 'c-company' }, 'Nazwa firmy (nie wypełniaj)'),
+          el('input', { id: 'c-company', name: 'company', type: 'text', tabindex: '-1', autocomplete: 'off', 'data-hp': '' }),
+        ),
+        el('div', { class: 'wiz-field' },
+          el('label', { class: 'wiz-consent' },
+            el('input', { type: 'checkbox', 'data-consent': '', ...(contactData.consent ? { checked: true } : {}), onchange: (e: Event) => { contactData.consent = (e.target as HTMLInputElement).checked; saveDraft(); } }),
+            el('span', { html: 'Wyrażam zgodę na przetwarzanie moich danych w celu przygotowania wyceny i kontaktu, zgodnie z <a href="/polityka-prywatnosci">polityką prywatności</a>. <span aria-hidden="true">*</span>' }),
+          ),
+          el('p', { class: 'wiz-field-error', id: 'err-c-consent', 'data-fielderr': 'c-consent', hidden: true }),
+        ),
+        el('div', { class: 'wiz-nav' },
+          el('button', { type: 'button', class: 'btn btn-ghost', onclick: goBack }, 'Wstecz'),
+          el('button', { type: 'submit', class: 'btn btn-gold', 'data-submit': '' }, 'Zobacz swoją wstępną wycenę'),
+        ),
+      );
+      swap(form);
+      focusHeading();
+    };
+
+    const validateContact = (): boolean => {
+      const errs: { id: string; label: string; msg: string }[] = [];
+      const name = contactData.name.trim();
+      const emailV = contactData.email.trim();
+      const phoneV = contactData.phone.trim();
+      if (name.length < 2) errs.push({ id: 'c-name', label: 'Imię i nazwisko', msg: 'Podaj imię i nazwisko.' });
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailV)) errs.push({ id: 'c-email', label: 'E-mail', msg: 'Podaj poprawny adres e-mail.' });
+      if (!/^[+]?[\d\s()-]{7,}$/.test(phoneV)) errs.push({ id: 'c-phone', label: 'Telefon', msg: 'Podaj poprawny numer telefonu.' });
+      if (!contactData.consent) errs.push({ id: 'c-consent', label: 'Zgoda', msg: 'Zgoda jest wymagana.' });
+
+      const box = root.querySelector<HTMLElement>('[data-errors]');
+      ['c-name', 'c-email', 'c-phone', 'c-consent'].forEach(clearFieldError);
+      if (errs.length && box) {
+        box.innerHTML = '';
+        box.append(
+          el('strong', {}, 'Uzupełnij dane kontaktowe:'),
+          el('ul', {}, ...errs.map((e) => el('li', {}, e.label + ' — ' + e.msg))),
+        );
+        box.hidden = false;
+        errs.forEach((e) => setFieldError(e.id, e.msg));
+        box.focus();
+        return false;
+      }
+      if (box) box.hidden = true;
+      return true;
+    };
+
+    // ——— Serializacja briefu (czytelny, do leada manual-quote) ———
+    const labelFor = (qid: string, value: string): string => {
+      for (const s of def.steps) for (const q of s.questions) if (q.id === qid) {
+        const o = q.options?.find((x) => x.value === value);
+        return o ? o.label : value;
+      }
+      return value;
+    };
+    const buildBrief = (): string => {
+      const lines: string[] = ['Zgłoszenie z konfiguratora „Wyceń swoje wnętrze".', ''];
+      for (const s of def.steps) {
+        for (const q of visibleQuestions(s)) {
+          const v = answers[q.id];
+          if (v == null || v === '' || (Array.isArray(v) && v.length === 0)) continue;
+          let text: string;
+          if (Array.isArray(v)) text = v.map((x) => labelFor(q.id, x)).join(', ');
+          else if (q.type === 'single') text = labelFor(q.id, String(v));
+          else text = String(v) + (q.unit ? ` ${q.unit}` : '');
+          lines.push(`• ${q.label}: ${text}`);
+        }
+      }
+      lines.push('', `Sesja: ${sessionId}`, `Wersja formularza: ${def.version}`);
+      return lines.join('\n').slice(0, 4900);
+    };
+
+    // ——— Stany UI ———
+    const stateView = (title: string, note?: string, spinner = false): HTMLElement =>
+      el('div', { class: 'wiz-state', role: 'status', 'aria-live': 'polite' },
+        spinner ? el('span', { class: 'wiz-boot-spinner', 'aria-hidden': 'true' }) : null,
+        el('h2', { class: 'wiz-step-title' }, title),
+        note ? el('p', { class: 'wiz-step-intro', style: 'margin-inline:auto' }, note) : null,
+      );
+
+    const swap = (node: HTMLElement) => {
+      root.innerHTML = '';
+      root.append(node);
+    };
+
+    const nextStepsPanel = () =>
+      el('div', { class: 'wiz-next' },
+        el('h3', {}, 'Co dzieje się dalej?'),
+        el('ol', {},
+          el('li', {}, 'Weryfikujemy zakres i przygotowujemy właściwą wycenę.'),
+          el('li', {}, 'Opiekun Panelia Studio kontaktuje się z Tobą.'),
+          el('li', {}, 'Przygotowujemy dopasowaną ofertę.'),
+        ),
+      );
+
+    const contactActions = () =>
+      el('div', { class: 'wiz-result-actions' },
+        el('a', { class: 'btn', href: `tel:${phoneHref}` }, `Zadzwoń: ${phone}`),
+        el('a', { class: 'btn btn-ghost', href: `mailto:${email}` }, 'Napisz do nas'),
+      );
+
+    const formatPrice = (n: number, currency: string) => {
+      try { return new Intl.NumberFormat('pl-PL').format(n) + ' ' + currency; }
+      catch { return `${n} ${currency}`; }
+    };
+
+    const renderResult = (r: EstimateResult) => {
+      const nodes: HTMLElement[] = [el('p', { class: 'wiz-result-eyebrow' }, 'Wynik')];
+
+      if ((r.result_type === 'range' || r.result_type === 'exact')) {
+        const cur = r.currency ?? 'PLN';
+        let priceText = '';
+        if (r.result_type === 'range' && r.price_from != null && r.price_to != null) {
+          priceText = `${formatPrice(r.price_from, '')}– ${formatPrice(r.price_to, cur)} brutto`;
+        } else if (r.price_gross != null) {
+          priceText = `${formatPrice(r.price_gross, cur)} brutto`;
+        } else if (r.price_from != null) {
+          priceText = `od ${formatPrice(r.price_from, cur)} brutto`;
+        }
+        nodes.push(
+          el('h2', { class: 'wiz-result-title' }, 'Twoja wstępna wycena jest gotowa'),
+          el('p', { class: 'wiz-price' }, priceText),
+          r.summary ? el('p', { class: 'wiz-result-package' }, r.summary) : null as unknown as HTMLElement,
+        );
+        trackEstimate('estimate_calculated', { ...analyticsBase(), result_type: r.result_type });
+      } else if (r.result_type === 'manual_quote') {
+        nodes.push(
+          el('h2', { class: 'wiz-result-title' }, 'Ta konfiguracja wymaga indywidualnej wyceny'),
+          el('p', { class: 'wiz-result-package' }, 'Mamy już wszystkie potrzebne informacje. Opiekun Panelia Studio skontaktuje się z Tobą i przygotuje dopasowaną ofertę.'),
+        );
+        trackEstimate('estimate_requires_manual_quote', { ...analyticsBase(), result_type: r.result_type });
+      } else {
+        // error
+        nodes.push(
+          el('h2', { class: 'wiz-result-title' }, 'Nie udało się teraz wysłać zgłoszenia'),
+          el('p', { class: 'wiz-result-package' }, r.summary ?? 'Spróbuj ponownie za chwilę lub skontaktuj się z nami bezpośrednio — Twoje odpowiedzi pozostają zapisane.'),
+        );
+        trackEstimate('estimate_failed', { ...analyticsBase(), result_type: 'error' });
+      }
+
+      const wrap = el('div', { class: 'wiz-result' }, ...nodes.filter(Boolean));
+      if (r.result_type === 'error') {
+        wrap.append(
+          el('div', { class: 'wiz-result-actions', style: 'margin-top:20px' },
+            el('button', { class: 'btn', type: 'button', onclick: () => { inContact = true; renderContactStep(); } }, 'Spróbuj ponownie'),
+          ),
+          contactActions(),
+        );
+      } else {
+        wrap.append(nextStepsPanel(), contactActions());
+        if (r.disclaimer) wrap.append(el('p', { class: 'wiz-disclaimer' }, r.disclaimer));
+        else wrap.append(el('p', { class: 'wiz-disclaimer' }, 'Wstępna wycena ma charakter orientacyjny. Ostateczna oferta wymaga weryfikacji zakresu.'));
+      }
+      swap(wrap);
+      root.querySelector<HTMLElement>('.wiz-result-title')?.focus?.();
+    };
+
+    const doSubmit = async () => {
+      // Honeypot
+      const hp = root.querySelector<HTMLInputElement>('[data-hp]');
+      if (hp && hp.value.trim()) { swap(renderThanksNeutral()); return; }
+      if (submitting) return;
+      if (!validateContact()) return;
+
+      submitting = true;
+      const btn = root.querySelector<HTMLButtonElement>('[data-submit]');
+      if (btn) { btn.disabled = true; btn.setAttribute('aria-disabled', 'true'); btn.textContent = 'Wysyłanie…'; }
+      trackEstimate('estimate_submitted', analyticsBase());
+      swap(stateView('Przygotowujemy Twoją wstępną wycenę…', 'To potrwa chwilę.', true));
+
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 25000);
+      try {
+        const result = await submitEstimate({
+          session: {
+            session_id: sessionId,
+            form_version: def.version,
+            path_choice: typeof answers.path === 'string' ? (answers.path as string) : null,
+            page_url: location.href,
+            landing_page: location.href,
+            referrer: document.referrer || null,
+            utm_source: utm.utm_source ?? null,
+            utm_medium: utm.utm_medium ?? null,
+            utm_campaign: utm.utm_campaign ?? null,
+            utm_content: utm.utm_content ?? null,
+            utm_term: utm.utm_term ?? null,
+            started_at: startedAt,
+            answers,
+          },
+          contact: {
+            name: contactData.name.trim(),
+            email: contactData.email.trim().toLowerCase(),
+            phone: contactData.phone.trim(),
+            consent: contactData.consent,
+          },
+          brief: buildBrief(),
+          packageInterest: inferPackageInterest(answers),
+          idempotencyKey,
+          signal: controller.signal,
+        });
+
+        if (result.result_type !== 'error') {
+          clearDraft();
+          idempotencyKey = `panelia-contact-${uuid()}`; // nowy klucz po sukcesie
+        }
+        renderResult(result);
+      } catch {
+        renderResult({ result_type: 'error', price_from: null, price_to: null, price_gross: null, currency: null, package: null, summary: null, included_items: [], excluded_items: [], disclaimer: null, lead_id: null, lead_delivered: false });
+      } finally {
+        window.clearTimeout(timer);
+        submitting = false;
+      }
+    };
+
+    const renderThanksNeutral = (): HTMLElement =>
+      el('div', { class: 'wiz-result' },
+        el('p', { class: 'wiz-result-eyebrow' }, 'Dziękujemy'),
+        el('h2', { class: 'wiz-result-title' }, 'Otrzymaliśmy Twoje zgłoszenie'),
+        el('p', { class: 'wiz-result-package' }, 'Skontaktujemy się z Tobą wkrótce.'),
+        contactActions(),
+      );
+
+    // ——— Start / resume ———
+    const start = (fresh: boolean) => {
+      if (fresh) { answers = {}; contactData = { name: '', email: '', phone: '', consent: false }; stepIndex = 0; inContact = false; clearDraft(); }
+      if (inContact) renderContactStep(); else renderConfigStep();
+    };
+
+    if (loadDraft()) {
+      const panel = el('div', { class: 'wiz-result' },
+        el('p', { class: 'wiz-result-eyebrow' }, 'Wznów'),
+        el('h2', { class: 'wiz-step-title', tabindex: '-1' }, 'Masz niedokończoną wycenę'),
+        el('p', { class: 'wiz-step-intro' }, 'Chcesz kontynuować od miejsca, w którym skończyłeś(-aś), czy zacząć od nowa?'),
+        el('div', { class: 'wiz-result-actions' },
+          el('button', { class: 'btn btn-gold', type: 'button', onclick: () => { applyDraft(); markStarted(); start(false); } }, 'Kontynuuj'),
+          el('button', { class: 'btn btn-ghost', type: 'button', onclick: () => start(true) }, 'Zacznij od nowa'),
+        ),
+      );
+      swap(panel);
+      panel.querySelector<HTMLElement>('.wiz-step-title')?.focus?.();
+    } else {
+      start(true);
+    }
+  }
+</script>

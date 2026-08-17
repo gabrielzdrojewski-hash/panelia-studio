@@ -1,0 +1,145 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PageHero from '../components/PageHero.astro';
+import EstimateWizard from '../components/estimate/EstimateWizard.astro';
+
+// Dane strukturalne — usługa wstępnej wyceny (bez cen; wynik pochodzi z ERP).
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'Service',
+  name: 'Wstępna wycena wnętrza — Panelia Studio',
+  serviceType: 'Projektowanie i wykończenie wnętrz',
+  provider: { '@type': 'Organization', name: 'Panelia Studio', url: 'https://paneliastudio.pl' },
+  areaServed: 'PL',
+  description:
+    'Wyceń swoje wnętrze w kilku krokach — skonfiguruj zakres projektu lub wykończenia, a przygotujemy wstępną wycenę i skontaktujemy się, aby omówić ofertę.',
+};
+
+const howItWorks = [
+  { n: '01', t: 'Skonfiguruj zakres', d: 'Odpowiadasz na kilka prostych pytań o nieruchomość, zakres i oczekiwania. Bez zobowiązań.' },
+  { n: '02', t: 'Otrzymujesz wstępną wycenę', d: 'Na podstawie konfiguracji przygotowujemy orientacyjny zakres i wstępną wycenę.' },
+  { n: '03', t: 'Rozmawiamy o szczegółach', d: 'Opiekun Panelia Studio kontaktuje się z Tobą, doprecyzowuje zakres i przygotowuje właściwą ofertę.' },
+];
+---
+
+<BaseLayout
+  title="Wyceń swoje wnętrze"
+  description="Wyceń swoje wnętrze w kilku krokach. Skonfiguruj projekt lub wykończenie, a Panelia Studio przygotuje wstępną wycenę i skontaktuje się, aby omówić ofertę."
+  path="/wycena"
+  structuredData={structuredData}
+>
+  <PageHero
+    eyebrow="Wyceń swoje wnętrze"
+    title="Wstępna wycena wnętrza w kilku krokach"
+    lead="Powiedz nam, czego potrzebujesz. Przeprowadzimy Cię przez krótką konfigurację, przygotujemy wstępną wycenę i skontaktujemy się, aby dopracować ofertę."
+  />
+
+  <!-- KONFIGURATOR (interaktywny) -->
+  <section class="section-tight" id="konfigurator">
+    <div class="container">
+      <EstimateWizard />
+    </div>
+  </section>
+
+  <!-- JAK TO DZIAŁA (treść indeksowalna) -->
+  <section class="section section-surface" id="jak-to-dziala">
+    <div class="container">
+      <div class="section-head" data-reveal>
+        <p class="eyebrow">Jak to działa</p>
+        <h2>Prosto, bez zobowiązań</h2>
+      </div>
+      <ol class="wycena-steps" data-reveal>
+        {
+          howItWorks.map((s) => (
+            <li class="wycena-step">
+              <span class="wycena-step-num">{s.n}</span>
+              <div>
+                <h3>{s.t}</h3>
+                <p class="muted">{s.d}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <!-- CO MOŻESZ SKONFIGUROWAĆ / DLA KOGO -->
+  <section class="section">
+    <div class="container wycena-grid">
+      <div data-reveal>
+        <p class="eyebrow">Co możesz skonfigurować</p>
+        <h2>Zakres dopasowany do Ciebie</h2>
+        <ul class="wycena-list">
+          <li>Projekt wnętrza, wykończenie albo obie ścieżki razem.</li>
+          <li>Rodzaj nieruchomości: mieszkanie, dom lub wybrane pomieszczenia.</li>
+          <li>Powierzchnię, lokalizację i stan nieruchomości.</li>
+          <li>Zakres prac, liczbę pomieszczeń, kuchnię, łazienki i zabudowy.</li>
+          <li>Oczekiwany standard i orientacyjne oczekiwania budżetowe.</li>
+          <li>Termin oraz dodatkowe wymagania i inspiracje.</li>
+        </ul>
+      </div>
+      <div data-reveal style="--reveal-delay: 100ms">
+        <p class="eyebrow">Dla kogo</p>
+        <h2>Jeśli planujesz wnętrze</h2>
+        <p class="lead muted">
+          Wstępna wycena jest dla osób urządzających własne mieszkanie lub dom oraz dla inwestorów,
+          którzy potrzebują przewidywalnego, powtarzalnego standardu na wielu lokalach.
+        </p>
+        <p class="muted">
+          Konfigurator pomaga uporządkować potrzeby i przyspieszyć rozmowę. Nie jest umową ani
+          wiążącą ofertą — to punkt wyjścia do wspólnej pracy nad projektem.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CO DALEJ + ZASTRZEŻENIE -->
+  <section class="section section-dark">
+    <div class="container container-narrow wycena-after" data-reveal>
+      <p class="eyebrow">Co dzieje się po wycenie</p>
+      <h2>Od konfiguracji do właściwej oferty</h2>
+      <p class="lead">
+        Po przesłaniu konfiguracji weryfikujemy zakres i przygotowujemy dopasowaną ofertę.
+        Opiekun Panelia Studio kontaktuje się z Tobą, aby omówić szczegóły.
+      </p>
+      <p class="muted wycena-note">
+        Wstępna wycena ma charakter orientacyjny. Ostateczna oferta zawsze wymaga weryfikacji
+        zakresu, stanu lokalu i wybranego standardu. Nie pokazujemy sztywnych cen na stronie —
+        każdą wycenę przygotowujemy indywidualnie.
+      </p>
+      <div class="wycena-cta-row">
+        <a href="#konfigurator" class="btn btn-gold">Rozpocznij wycenę</a>
+        <a href="/kontakt" class="btn btn-ghost">Wolę porozmawiać</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .wycena-steps {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(20px, 3vw, 40px);
+  }
+  @media (max-width: 820px) { .wycena-steps { grid-template-columns: 1fr; } }
+  .wycena-step { display: flex; gap: 18px; }
+  .wycena-step-num {
+    font-family: var(--font-display); font-weight: 800; font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+    color: var(--gold); line-height: 1; flex-shrink: 0;
+  }
+  .wycena-step h3 { font-size: 1.2rem; margin: 0 0 8px; }
+
+  .wycena-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 5vw, 80px); align-items: start; }
+  @media (max-width: 900px) { .wycena-grid { grid-template-columns: 1fr; } }
+  .wycena-list { margin: 1.4rem 0 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+  .wycena-list li { position: relative; padding-left: 26px; color: var(--ink-90); }
+  .wycena-list li::before {
+    content: ''; position: absolute; left: 0; top: 0.55em;
+    width: 9px; height: 9px; background: var(--gold); transform: rotate(45deg);
+  }
+
+  .wycena-after { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+  .wycena-after .lead { max-width: 56ch; }
+  .wycena-note { max-width: 60ch; font-size: 0.92rem; }
+  .wycena-cta-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; margin-top: 1rem; }
+</style>
