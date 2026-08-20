@@ -4,7 +4,7 @@
 // Dowodzi kluczowych zachowań:
 //   - range/exact/manual_quote_accepted → 0 wywołań /api/contact (ochrona przed duplikatem),
 //   - 422/429/403/5xx → 0 wywołań /api/contact (brak bypassu walidacji/rate-limitu),
-//   - not_configured/404/network → kontrolowany fallback (dokładnie 1 /api/contact),
+//   - not_configured/404 → kontrolowany fallback (dokładnie 1 /api/contact); network → BEZ fallbacku (0),
 //   - ten sam idempotency_key w /api/estimate i /api/contact,
 //   - fallback brief zachowuje wszystkie odpowiedziane, widoczne pytania (w granicach limitu).
 
@@ -127,11 +127,13 @@ async function run() {
   r = await submitEstimate(baseInput());
   check('500 → error, outcome=server_error, 0 wywołań /api/contact', r.result_type === 'error' && r.outcome === 'server_error' && contactCalls === 0);
 
-  // 10. network/timeout → kontrolowany fallback (jawna decyzja, nie efekt uboczny)
+  // 10. network/timeout → BEZ fallbacku. ERP /api/public/estimate jest idempotentne i SAMO tworzy lead,
+  // a fallback trafiłby do INNEGO endpointu (/api/contact) → ryzyko drugiego leada. Klient ponawia z tym
+  // samym idempotency_key (ERP deduplikuje). Zatem network_error → neutralny błąd, 0 wywołań /api/contact.
   reset();
   estimateResponder = () => { throw new Error('network down'); };
   r = await submitEstimate(baseInput());
-  check('network → kontrolowany fallback (1 kontakt), outcome=network_error', contactCalls === 1 && r.outcome === 'network_error' && r.result_type === 'manual_quote');
+  check('network → BEZ fallbacku (0 kontaktów), outcome=network_error, result_type=error', contactCalls === 0 && r.outcome === 'network_error' && r.result_type === 'error');
 
   // 11. fallback: gdy /api/contact zawiedzie → error, bez fałszywego sukcesu
   reset();

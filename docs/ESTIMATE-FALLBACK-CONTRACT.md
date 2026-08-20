@@ -20,7 +20,7 @@ Cena pochodzi **wyłącznie** z Fatica ERP. Frontend nigdy nie liczy ani nie zga
 | 2xx `ok:true` (przyjęte, `manual_quote`/`lead_id`) | `manual_quote_accepted` | **NIE** (terminal) | „wycena indywidualna, opiekun się skontaktuje" |
 | 503 `result_type=not_configured` | `not_configured` | **TAK** (kontrolowany) | manual_quote |
 | 404 (endpoint estymacji niewdrożony) | `backend_not_ready` | **TAK** (kontrolowany, udokumentowany) | manual_quote |
-| brak odpowiedzi (sieć/timeout/abort) | `network_error` | **TAK** (jawna decyzja, patrz niżej) | manual_quote |
+| brak odpowiedzi (sieć/timeout/abort) | `network_error` | **NIE** (ERP idempotentne — patrz niżej) | neutralny błąd; klient ponawia |
 | 422 | `validation_error` | **NIE** | neutralny błąd, popraw dane |
 | 429 | `rate_limited` | **NIE** (nie obchodzić rate limitu) | „za dużo zgłoszeń, spróbuj za chwilę" (+`Retry-After`) |
 | 401 / 403 | `forbidden` | **NIE** | neutralny błąd |
@@ -28,12 +28,12 @@ Cena pochodzi **wyłącznie** z Fatica ERP. Frontend nigdy nie liczy ani nie zga
 | 5xx (poza `not_configured`) | `server_error` | **NIE** (ryzyko duplikatu) | neutralny błąd + kontakt bezpośredni |
 
 ## Kiedy wolno użyć `/api/contact`
-Tylko dla `FALLBACK_ALLOWED = { not_configured, backend_not_ready, network_error }`.
-Wspólny mianownik: **ERP nie potwierdził przyjęcia żadnego zgłoszenia** → brak ryzyka duplikatu.
+Tylko dla `FALLBACK_ALLOWED = { not_configured, backend_not_ready }`.
+Wspólny mianownik: **ERP jawnie sygnalizuje, że estymacja nie przyjęła zgłoszenia (brak leada)** → brak ryzyka duplikatu.
 
 ## Kiedy fallback jest ZABRONIONY
 `validation_error (422)`, `rate_limited (429)`, `forbidden (401/403)`, `client_error (4xx)`,
-`server_error (5xx)` oraz każdy sukces (`calculated`, `manual_quote_accepted`).
+`server_error (5xx)`, `network_error` (brak odpowiedzi) oraz każdy sukces (`calculated`, `manual_quote_accepted`).
 Zasada: **nie tworzymy drugiego leada tylko dlatego, że estimator zwrócił błąd**, i nie omijamy
 rate limitu innym endpointem.
 
@@ -49,12 +49,28 @@ frontend **nie** wykonuje `POST /api/contact`. Test dowodzi: `manual_quote accep
   (logika w wizardzie: klucz regenerowany tylko dla wyniku innego niż `error`).
 - Deduplikację wykonuje **serwer/ERP** — frontend jedynie przekazuje identyfikator (bez dedup w przeglądarce).
 
-## `network_error` — jawna decyzja i warunek bezpieczeństwa
-Dziś `/api/estimate` (adapter) **nie tworzy leada** (zwraca `not_configured`), więc brak odpowiedzi
-oznacza, że ERP niczego nie zapisał → fallback jest bezpieczny i nie gubi leada.
-**ERP GAP:** gdy estymacja ERP zacznie **zapisywać lead**, `network_error`/timeout przestaje być
-jednoznaczny (ERP mógł przyjąć zgłoszenie mimo braku odpowiedzi). Wtedy należy albo usunąć
-`network_error` z `FALLBACK_ALLOWED`, albo ERP musi deduplikować po `idempotency_key`.
+## `network_error` — USUNIĘTY z fallbacku (final integration)
+Odkąd ERP `POST /api/public/estimate` **ma prawdziwą idempotencję** (unikat `(organization_id, idempotency_key)`)
+i **sam tworzy lead**, brak odpowiedzi (timeout/abort) przestał być jednoznaczny — ERP mógł przyjąć zgłoszenie
+mimo braku odpowiedzi. Fallback trafiłby do **innego** endpointu (`/api/contact` → `/api/public/leads`, osobna
+tabela idempotencji `public_lead_submissions`), więc mógłby utworzyć **drugi** lead. Dlatego `network_error`
+→ neutralny błąd; **klient ponawia z tym samym `idempotency_key`**, a ERP deduplikuje. Pozostałe warunki
+fallbacku (`not_configured`, `backend_not_ready`) są bezpieczne, bo oznaczają, że ERP **nie** przyjął zgłoszenia.
+
+## Bramka `/api/estimate` (proxy do ERP) i server-side config
+`public/api/estimate.php` jest **config-gated proxy** do ERP (analogicznie do `public/api/contact.php`):
+przeglądarka → `POST /api/estimate` → `POST {erp_estimate_url}` (server-side, token z secure_config).
+Adres i token pozostają **wyłącznie** po stronie serwera (secure_config poza web-rootem) — nigdy w bundlu klienta.
+
+Wymagane klucze w `secure_config/panelia-erp-config.php` (ustawia operator; repo ich NIE zapisuje):
+- `erp_estimate_url` — pełny URL, np. `https://app.fatica.pl/api/public/estimate` **[WYMAGANE — bez niego bramka zwraca `not_configured`]**
+- `erp_estimate_token` — token ze scope **`public_estimates:create`** *(opcjonalne; brak → reuse `erp_token`; wtedy ten token musi mieć dodane `public_estimates:create` po stronie ERP)*
+- opcjonalnie: `request_timeout_ms`, `connect_timeout_ms`, oraz do E2E `mock` + `allow_mock` + `is_production=false`
+
+Mapowanie ERP→klient (w `estimate.php`): 2xx `ok:true` → `200` (terminal); `422`→`422`; `401/403`→`403`;
+`429`→`429`(+`Retry-After`); `503`→`503 not_configured` (fallback); `5xx`/timeout/transport → `502` (server_error,
+**bez** fallbacku — unik duplikatu). Dopóki `erp_estimate_url` nie jest ustawione, bramka zwraca `not_configured`
+i obowiązuje dotychczasowy, sprawdzony fallback do `/api/contact`.
 
 ## „Fallback brief" — co zachowuje, a czego NIE gwarantuje
 `buildFallbackBrief` buduje **czytelny tekst** (pole `message` w `/api/contact`) z pytań **aktualnie
@@ -68,8 +84,16 @@ jako tekst w `message` (limit ~5000 znaków) i **nie** posiada pól `answers`/`f
 dopiero przez docelowy endpoint estymacji Fatica ERP (`/api/estimate` → ERP). Do tego czasu leady z
 konfiguratora docierają przez `/api/contact` z briefem tekstowym.
 
-## Czego jeszcze musi dostarczyć Fatica ERP (ERP GAPS)
-1. Publiczny endpoint estymacji (kalkulacja + zapis leada z pełnymi `answers`/`form_version`).
-2. Jednoznaczny kontrakt akceptacji zgłoszenia (`ok`, `lead_id`, `lead_delivered`) i kodów 200/201/422/429/503.
-3. Deduplikacja po `idempotency_key` (warunek bezpiecznego retry/timeout).
-4. Prowenans/audit trail konfiguracji po stronie ERP.
+## Status kontraktu ERP (zewnętrzne API)
+Dostarczone przez Fatica ERP `POST /api/public/estimate` (scope `public_estimates:create`):
+1. ✅ Publiczny endpoint estymacji z zapisem leada + strukturalne `answers` + `form_version` (provenance).
+2. ✅ Jednoznaczny kontrakt akceptacji (`ok`, `lead_id`, `lead_delivered`) i kody 200/201/422/429/503.
+3. ✅ Deduplikacja po `idempotency_key` (unikat `(organization_id, idempotency_key)`) — bezpieczny retry/timeout.
+4. ✅ Prowenans/audit (ActivityLog + EventOutbox po stronie ERP).
+5. Pricing: obecnie `NotConfiguredPricingEngine` → `manual_quote` (poprawny sukces 2xx; ERP nie zgaduje ceny).
+   Priced `estimate` (gdy pojawi się silnik) będzie wymagał dopięcia mapowania cen w bramce/`normalizeEstimateResult`.
+
+## Pozostałe kroki wdrożeniowe (poza kodem Panelii)
+- Wdrożenie ERP na produkcję (endpoint dostępny publicznie).
+- Ustawienie `erp_estimate_url` (+ scope `public_estimates:create` na tokenie) w secure_config.
+- Dopiero wtedy bramka przechodzi z `not_configured` (fallback do `/api/contact`) na realne proxy do ERP.

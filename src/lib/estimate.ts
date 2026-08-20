@@ -218,15 +218,18 @@ export interface SubmitEstimateInput {
 const ESTIMATE_ENDPOINT = '/api/estimate';
 
 // Outcomy, przy których WOLNO uruchomić kontrolowany fallback do /api/contact.
-// Wspólny mianownik: ERP NIE potwierdził przyjęcia żadnego zgłoszenia → brak ryzyka duplikatu.
-//   - not_configured / backend_not_ready: adapter jawnie sygnalizuje brak estymacji ERP.
-//   - network_error: brak odpowiedzi. Bezpieczne DOPÓKI /api/estimate nie tworzy leada w ERP.
-//     ERP GAP: gdy estymacja ERP zacznie zapisywać lead, timeout/network musi albo NIE fallbackować,
-//     albo ERP musi deduplikować po idempotency_key (patrz raport / runbook).
+// Wspólny mianownik: ERP NIE utworzył żadnego leada → brak ryzyka duplikatu.
+//   - not_configured / backend_not_ready: adapter/ERP jawnie sygnalizuje, że estymacja nie przyjęła
+//     zgłoszenia (brak leada) → bezpieczny fallback sprawdzonym kanałem /api/contact.
+//
+// network_error USUNIĘTY z fallbacku (final integration): odkąd ERP POST /api/public/estimate MA prawdziwą
+// idempotencję i SAM tworzy lead, brak odpowiedzi (timeout/abort) może oznaczać, że lead POWSTAŁ. Fallback
+// idzie do INNEGO endpointu (/api/contact → /api/public/leads — osobna tabela idempotencji), więc mógłby
+// utworzyć DRUGI lead. Dlatego network_error → neutralny błąd; klient ponawia z TYM SAMYM idempotency_key
+// (ERP deduplikuje po (organization_id, idempotency_key)).
 const FALLBACK_ALLOWED: ReadonlySet<EstimateOutcome> = new Set([
   'not_configured',
   'backend_not_ready',
-  'network_error',
 ]);
 
 export interface EstimateEndpointClassification {
@@ -462,10 +465,12 @@ export async function submitEstimate(input: SubmitEstimateInput): Promise<Estima
     case 'forbidden':
     case 'client_error':
     case 'server_error':
+    case 'network_error':
+      // network_error: brak odpowiedzi ERP może oznaczać, że lead POWSTAŁ (ERP jest idempotentne) →
+      // NIE fallbackujemy do /api/contact (unik duplikatu). Klient ponawia z tym samym idempotency_key.
       return errorResult(cls.outcome, ESTIMATE_MESSAGES.unavailable, cls);
     case 'not_configured':
     case 'backend_not_ready':
-    case 'network_error':
       break; // kontrolowany fallback poniżej
   }
 
