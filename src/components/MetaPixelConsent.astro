@@ -73,6 +73,7 @@
   });
   const startedForms = new WeakSet<HTMLFormElement>();
   const onActivity = (event: Event) => {
+    if (!allowed) return;
     const target = event.target as Element;
     const form = target.closest('form');
     if (!form || startedForms.has(form) || (target as HTMLInputElement).name === 'company') return;
