@@ -116,11 +116,15 @@ ErrorDocument 404 /404.html
 - Wskazuje sitemapę; nie blokuje istotnych zasobów.
 
 ## 16. Test formularza
-- **UWAGA (BLOCKER):** formularz działa w trybie **demonstracyjnym** — nie wysyła leada do
-  Fatica ERP (`src/lib/contact.ts`, `sendContactForm` zwraca `demo: true`).
-- Przed produkcją: wdrożyć serwerowy endpoint `POST /api/public/leads` (sekrety po stronie
-  serwera) i podmienić implementację. Szczegóły: `docs/FATICA_INTEGRATION.md`.
-- Test po integracji: wysłanie zgłoszenia, poprawny zapis w Fatica, walidacja pól i zgód.
+- Formularz wysyła realne zgłoszenia przez własny gateway `public/api/contact.php` → Fatica ERP
+  (`src/lib/contact.ts`, `sendContactForm`: nigdy nie udaje sukcesu, nie ma trybu demo — patrz
+  commit `c5825cf` „Enable production Panelia contact form after ERP E2E validation").
+  Sekrety (adres ERP, token) czytane wyłącznie po stronie serwera z `secure_config` poza
+  webrootem — nie z tego repo. Szczegóły: `docs/FATICA_INTEGRATION.md`,
+  `docs/PANELIA-ERP-CONTACT-RUNBOOK.md`.
+- Test po wdrożeniu: wysłanie zgłoszenia testowego, poprawny zapis w Fatica, walidacja pól i
+  zgód, oraz że sekrety serwera (`secure_config`) istnieją na nowym hostingu — inaczej gateway
+  zwróci 503 (`unavailable`), formularz pokaże błąd klientowi, ale nie „udany" komunikat.
 
 ## 17. Test 404
 - Wejście na nieistniejący URL zwraca `/404.html` (sekcja 6, `ErrorDocument`).
