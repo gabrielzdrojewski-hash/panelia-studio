@@ -1,0 +1,90 @@
+<div class="meta-consent" data-meta-consent hidden role="region" aria-label="Zgoda na marketingowe pliki cookie">
+  <p>Możemy używać piksela Meta, aby mierzyć wizyty i skuteczność reklam. Działa dopiero po Twojej zgodzie. <a href="/polityka-prywatnosci">Polityka prywatności</a></p>
+  <div class="meta-consent__actions">
+    <button type="button" data-meta-reject>Odrzuć</button>
+    <button type="button" data-meta-accept>Akceptuję</button>
+  </div>
+</div>
+<button type="button" class="meta-consent__settings" data-meta-settings>Ustawienia cookies</button>
+
+<style>
+  .meta-consent { position: fixed; z-index: 1000; bottom: 1rem; left: 1rem; right: 1rem; max-width: 42rem; margin: auto; padding: 1.25rem; color: #241f1b; background: #fff; border: 1px solid #9d8670; border-radius: .75rem; box-shadow: 0 1rem 3rem #0003; }
+  .meta-consent[hidden] { display: none; }
+  .meta-consent p { margin: 0 0 1rem; line-height: 1.5; }
+  .meta-consent a { text-decoration: underline; }
+  .meta-consent__actions { display: flex; gap: .75rem; flex-wrap: wrap; }
+  .meta-consent__actions button { min-height: 44px; padding: .6rem 1.2rem; border: 1px solid currentColor; border-radius: .4rem; background: #fff; color: #241f1b; cursor: pointer; }
+  .meta-consent__actions [data-meta-accept] { background: #241f1b; color: #fff; }
+  .meta-consent__settings { position: fixed; bottom: .5rem; left: .5rem; z-index: 999; min-height: 44px; padding: .35rem .7rem; border: 1px solid #9d8670; border-radius: .4rem; background: #fff; color: #241f1b; cursor: pointer; font-size: .75rem; }
+  .meta-consent button:focus-visible, .meta-consent__settings:focus-visible { outline: 3px solid #bd7b23; outline-offset: 2px; }
+</style>
+
+<script>
+  const PIXEL_ID = '869700282771372';
+  const KEY = 'panelia.meta.consent.v1';
+  type MetaEvent = 'ViewContent' | 'Lead' | 'FormStart';
+  type Fbq = ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) => void; queue?: unknown[][]; loaded?: boolean; version?: string };
+  const win = window as typeof window & { fbq?: Fbq; _fbq?: Fbq };
+  const liveHost = ['paneliastudio.pl', 'www.paneliastudio.pl'].includes(location.hostname);
+  const banner = document.querySelector<HTMLElement>('[data-meta-consent]');
+  let allowed = false;
+  let started = false;
+  const choice = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
+  const save = (value: string) => { try { localStorage.setItem(KEY, value); } catch { /* zgoda działa w bieżącej sesji */ } };
+  const init = () => {
+    if (!liveHost) return;
+    if (started) { win.fbq?.('consent', 'grant'); win.fbq?.('track', 'PageView'); return; }
+    started = true;
+    const fbq = ((...args: unknown[]) => { if (fbq.callMethod) fbq.callMethod(...args); else fbq.queue?.push(args); }) as Fbq;
+    fbq.queue = []; fbq.loaded = true; fbq.version = '2.0';
+    win.fbq = win._fbq = fbq;
+    const script = document.createElement('script');
+    script.async = true; script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+    document.head.appendChild(script);
+    fbq('init', PIXEL_ID);
+    fbq('track', 'PageView');
+  };
+  const decide = (accept: boolean) => {
+    allowed = accept;
+    save(accept ? 'accepted' : 'rejected');
+    banner?.setAttribute('hidden', '');
+    if (accept) init();
+    else if (started) win.fbq?.('consent', 'revoke');
+  };
+  if (!liveHost) document.querySelector('[data-meta-settings]')?.remove();
+  else if (choice() === 'accepted') { allowed = true; init(); }
+  else if (choice() !== 'rejected') banner?.removeAttribute('hidden');
+  document.querySelector('[data-meta-accept]')?.addEventListener('click', () => decide(true));
+  document.querySelector('[data-meta-reject]')?.addEventListener('click', () => decide(false));
+  document.querySelector('[data-meta-settings]')?.addEventListener('click', () => { banner?.removeAttribute('hidden'); banner?.querySelector<HTMLButtonElement>('button')?.focus(); });
+  window.addEventListener('panelia:meta', (event) => {
+    const name = (event as CustomEvent<{ name?: MetaEvent }>).detail?.name;
+    if (!allowed || !name) return;
+    if (name === 'FormStart') win.fbq?.('trackCustom', 'form_start');
+    else if (name === 'Lead' || name === 'ViewContent') win.fbq?.('track', name);
+  });
+  document.addEventListener('click', (event) => {
+    const anchor = (event.target as Element).closest('a[href]');
+    if (!anchor) return;
+    const url = new URL(anchor.getAttribute('href') ?? '', location.href);
+    if (url.origin === location.origin && (/^\/(kontakt|wycena)\/?$/.test(url.pathname) || ['#konfigurator', '#kontakt'].includes(url.hash))) {
+      window.dispatchEvent(new CustomEvent('panelia:meta', { detail: { name: 'ViewContent' } }));
+    }
+  });
+  const startedForms = new WeakSet<HTMLFormElement>();
+  const onActivity = (event: Event) => {
+    if (!allowed) return;
+    const target = event.target as Element;
+    const form = target.closest('form');
+    if (!form || startedForms.has(form) || (target as HTMLInputElement).name === 'company') return;
+    startedForms.add(form);
+    window.dispatchEvent(new CustomEvent('panelia:meta', { detail: { name: 'FormStart' } }));
+  };
+  document.addEventListener('input', onActivity);
+  document.addEventListener('change', onActivity);
+  window.addEventListener('panelia:analytics', (event) => {
+    if ((event as CustomEvent<{ event?: string }>).detail?.event === 'estimate_started') {
+      window.dispatchEvent(new CustomEvent('panelia:meta', { detail: { name: 'FormStart' } }));
+    }
+  });
+</script>

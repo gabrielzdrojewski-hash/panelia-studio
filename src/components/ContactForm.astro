@@ -388,6 +388,7 @@ const groups = [...new Set(packageOptions.map((option) => option.group))];
         const result = await sendOnce(payload);
 
         if (result.ok) {
+          window.dispatchEvent(new CustomEvent('panelia:meta', { detail: { name: 'Lead' } }));
           showStatus(result.message, 'success');
           form.reset();
           idempotencyKey = `panelia-contact-${makeUuid()}`; // nowy klucz po sukcesie
