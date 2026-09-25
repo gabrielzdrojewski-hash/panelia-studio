@@ -60,7 +60,7 @@
   window.addEventListener('panelia:meta', (event) => {
     const name = (event as CustomEvent<{ name?: MetaEvent }>).detail?.name;
     if (!allowed || !name) return;
-    if (name === 'FormStart') win.fbq?.('trackCustom', name);
+    if (name === 'FormStart') win.fbq?.('trackCustom', 'form_start');
     else if (name === 'Lead' || name === 'ViewContent') win.fbq?.('track', name);
   });
   document.addEventListener('click', (event) => {
