@@ -4,6 +4,7 @@ import '../styles/global.css';
 import BaseHead from '../components/BaseHead.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import MetaPixelConsent from '../components/MetaPixelConsent.astro';
 import { site } from '../data/site';
 
 interface Props {
@@ -51,6 +52,7 @@ const {
       <slot />
     </main>
     <Footer />
+    <MetaPixelConsent />
 
     <script>
       // Subtelne animacje wejścia. Respektuje prefers-reduced-motion.

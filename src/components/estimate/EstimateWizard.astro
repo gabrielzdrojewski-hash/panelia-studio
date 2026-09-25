@@ -966,6 +966,9 @@ import { contact } from '../../data/site';
         });
 
         if (result.result_type !== 'error') {
+          if (result.lead_delivered) {
+            window.dispatchEvent(new CustomEvent('panelia:meta', { detail: { name: 'Lead' } }));
+          }
           clearDraft();
           idempotencyKey = `panelia-contact-${uuid()}`; // nowy klucz po sukcesie
         }
